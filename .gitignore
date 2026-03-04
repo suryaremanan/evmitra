@@ -1,0 +1,19 @@
+# Python cache and bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual environments and local env files
+.venv/
+venv/
+env/
+.env
+
+# Local runtime artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# OS/editor artifacts
+.DS_Store
+.vscode/

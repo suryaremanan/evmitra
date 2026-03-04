@@ -7,8 +7,14 @@ import json
 import math
 import os
 import requests
+from pathlib import Path
 
 from car_profiles import CAR_PROFILES, get_profile
+
+
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent if (BASE_DIR.parent / "data").exists() else BASE_DIR
+DATA_DIR = PROJECT_ROOT / "data"
 
 
 # ─────────────────────────────────────────────────────────
@@ -16,8 +22,13 @@ from car_profiles import CAR_PROFILES, get_profile
 # ─────────────────────────────────────────────────────────
 
 def load_json(filename):
+    file_path = DATA_DIR / filename
+    if not file_path.exists():
+        # Backward compatibility: support legacy root-level data files.
+        file_path = PROJECT_ROOT / filename
+
     try:
-        with open(filename, encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         print(f"⚠️  {filename} not found — using empty dict")

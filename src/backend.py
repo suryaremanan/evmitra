@@ -981,7 +981,8 @@ def stream_route(req: RouteRequest):
                 supported = ", ".join(f"{a}↔{b}" for a, b in HIGHWAY_ROUTES.keys())
                 yield f"data: {json.dumps({'type': 'ERROR', 'message': f'Could not find route data for {from_city} → {to_city}. Pre-loaded routes: {supported}'})}\n\n"
                 return
-            yield f"data: {json.dumps({'type': 'PLANNING', 'message': f'✅ Route discovered: {route["distance_km"]}km via TinyFish live lookup'})}\n\n"
+            discovered_msg = f"✅ Route discovered: {route['distance_km']}km via TinyFish live lookup"
+            yield f"data: {json.dumps({'type': 'PLANNING', 'message': discovered_msg})}\n\n"
 
         dist_km = route["distance_km"]
         highway = route["highway"]

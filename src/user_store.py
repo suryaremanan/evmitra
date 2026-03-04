@@ -11,7 +11,9 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "ev_mitra_users.db"
+BASE_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BASE_DIR.parent if (BASE_DIR.parent / "data").exists() else BASE_DIR
+DB_PATH = PROJECT_ROOT / "ev_mitra_users.db"
 
 
 def _conn() -> sqlite3.Connection:
