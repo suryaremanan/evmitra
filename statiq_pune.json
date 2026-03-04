@@ -1,0 +1,237 @@
+{
+  "city": "Pune",
+  "network": "Statiq",
+  "stations": [
+    {
+      "name": "BP COCO RTO",
+      "address": "PUNE RTO, Pune, Maharashtra, 411001, India",
+      "connector_types": [
+        "DC",
+        "AC"
+      ],
+      "power_kw": 120
+    },
+    {
+      "name": "MH | Pune | BMW - Bavaria Motors Camp",
+      "address": "15 B, Pune, Maharashtra",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Sunfuel - Crowne Plaza Pune City Centre",
+      "address": "37 & 37, Cts No, 1, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "MH | Pune | JW Marriott - Pune",
+      "address": "Senapati Bapat Rd, Pune, Maharashtra",
+      "connector_types": [
+        "DC",
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Swaranjali Level2",
+      "address": "Sahakar Nagar 2, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Ratnankur apartment 4W-02",
+      "address": "Mayur Colony, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Ratnankur apartment 4W-01",
+      "address": "Mayur Colony, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "ONE AVANTE 4W 001",
+      "address": "Paschimanagri, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Balaji co housing society 4W",
+      "address": "Sahakar Nagar, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "VASCON WINDERMERE 4W-01",
+      "address": "Koregaon Park, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "VASCON WINDERMERE 4W-03",
+      "address": "Koregaon Park, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "VASCON WINDERMERE 4W-02",
+      "address": "Koregaon Park, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "MH | Pune | The Ritz-Carlton",
+      "address": "Golf Course Square, Pune, Maharashtra",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Mont Vert Pristine 4W 002",
+      "address": "Chikhalwadi, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Bhajan Singh Da Dhabha Charging Station",
+      "address": "Old Mumbai - Pune Hwy, near Somatane Phata, Varsoli, Pune, Maharashtra 410506",
+      "connector_types": [
+        "DC",
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Sunfuel - Club Mahindra Resort - Tungi",
+      "address": "Tungi, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Li-Hinjawadi Hub",
+      "address": "Hinjawadi, Pune, Maharashtra",
+      "connector_types": [
+        "DC",
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Nexus Westend Mall Charging Station",
+      "address": "Aundh, Pune, Maharashtra",
+      "connector_types": [
+        "DC",
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Hotel Rajdhani Palace Charging Station",
+      "address": "Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Ador Pune Charging Station",
+      "address": "Pune, Maharashtra",
+      "connector_types": [
+        "DC",
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Westend Center One Charging Station",
+      "address": "Aundh, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "ZEN ESTATES",
+      "address": "Kharadi, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Tata Power- IOCL Coco Agarkar Nagar",
+      "address": "Agarkar Nagar, Pune, Maharashtra",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "MSEDEL- Ganeshkhind Subdivision Gokhale Nagar",
+      "address": "Gokhale Nagar, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "MSEDCL- MSEDCL-Wanwadi Branch",
+      "address": "Wanwadi, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Hari Om Batteries",
+      "address": "Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Sunil Autoworks",
+      "address": "Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "ABB- Business Bay",
+      "address": "Business Bay, Yerwada, Pune, Maharashtra",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    }
+  ],
+  "total_found": 28
+}

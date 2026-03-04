@@ -1,0 +1,39 @@
+{
+  "car": "Tata Nexon EV",
+  "source": "Team-BHP",
+  "thread_url": "https://www.team-bhp.com/forum/electric-cars/245021-not-problem-plenty-my-tata-nexon-ev-review.html",
+  "real_world_range": {
+    "city_ac_on_km": 180,
+    "highway_kmph_100": 230,
+    "worst_case_km": 120,
+    "best_case_km": 250
+  },
+  "charging_network_experiences": [
+    {
+      "network": "Tata Power / Generic Fast Chargers",
+      "experience": "mixed",
+      "quote": "Out of 4 fast charging sessions, 2 were flawless, 1 went inactive as soon as I reached and 1 had power cut just after adding enough charge.",
+      "location": "Bangalore-Mangalore Highway"
+    },
+    {
+      "network": "Public Infrastructure",
+      "experience": "mixed",
+      "quote": "Status of each station is updated live on respective app. However, there is a chance of station becoming unavailable after we start our journey... Wait for one of the charging guns to get free OR request the current user.",
+      "location": "Mysore"
+    }
+  ],
+  "long_term_issues": [
+    "HV Battery pack replacement required due to 'bad cells' within 1 year/15,000 km",
+    "Charging gun jam (actuator failure) caused by dust and mud from rear wheels",
+    "Sudden SoC drop (e.g., 23% to 0% within 6 km)",
+    "Uneven tire wear suspected to be caused by camber issues after 35,000 km"
+  ],
+  "things_owners_love": [
+    "Silence, pickup, technology and cost effectiveness",
+    "Selectable regeneration and cruise control added via Prime update",
+    "Most stress free driving experience I've had in Mumbai traffic",
+    "The superb power delivery and refinement"
+  ],
+  "nagpur_mentions": null,
+  "honest_verdict": "Owners are genuinely impressed by the EV's refinement and low running costs, but the ownership experience is marred by critical reliability failures like total battery pack replacements. While the driving experience is superior to ICE cars, long-distance travel still requires obsessive planning due to inconsistent charging infrastructure."
+}

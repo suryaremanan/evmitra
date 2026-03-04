@@ -1,0 +1,15 @@
+{
+  "real_range_km": "220-240",
+  "first_public_charging_experience": "The reviewer did not explicitly detail a visit to a public charging station, but expressed significant frustration with Tata Power regarding a 20-day delay in home charger installation. They also noted the restrictive manufacturer advisory that DC fast charging should only be used in a 1:4 ratio with slow charging, which they felt made long-distance travel (like Mumbai to Delhi) theoretically impossible.",
+  "charging_networks_tried": [
+    "Tata Power (Home installation service)"
+  ],
+  "unexpected_discoveries": [
+    "Battery degradation to 70% is expected according to the manual",
+    "Water wading limit is only 30cm (1 foot), causing the reviewer to question its 'SUV' label",
+    "Software 'gore' including display reboots while driving and inconsistent rain-sensing wipers",
+    "Significant range variation (20km difference) between two identical Nexon EVs driven by the same person",
+    "Car can get stuck in 'Crawl back mode' (low performance) due to software moodiness"
+  ],
+  "most_honest_quote": "Range on display is as humongous a lie as Google maps waali aunty. But one gets used to it."
+}

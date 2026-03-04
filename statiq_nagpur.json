@@ -1,0 +1,224 @@
+{
+  "city": "Nagpur",
+  "network": "Statiq",
+  "stations": [
+    {
+      "name": "JAIMALSINGH LAMBA & CO.",
+      "address": "RO AT KAMPTEE RD NR TULI MALL, NAGPUR NARI ROAD-JARIPATKA, Nagpur, Maharashtra, 440017, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 120
+    },
+    {
+      "name": "2018781-SANGITA FUEL SERVICES",
+      "address": "Plot no.1, Baba Balaknath square share layout, Uppalwadi Road, Nagpur, Maharashtra, 440026, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 120
+    },
+    {
+      "name": "BHAWANIMATA KALAMNA PETROLEUM",
+      "address": "AT KALAMNA NAGPUR CITY, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "ID(ae3v5h) Highway Auto Service",
+      "address": "Pardi, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "ID(dkgo5i) Patel Service Station",
+      "address": "Ganesh Nagari, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "MHKS Mohammad Ali Petrol Pump",
+      "address": "Kamptee road, khairy, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "MH | Nagpur | Aryodaya Hyundai",
+      "address": "PLOT NO 2 KHASRA NO 71/1, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Statiq Unnati Motors Nagpur Station",
+      "address": "G-17/18, Nagpur, Maharashtra, 440025, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 60
+    },
+    {
+      "name": "2005453-AMIN TRANSPORT PVT. LTD.",
+      "address": "KHAPRI, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "ID(hdc92m) Freeway auto service",
+      "address": "Kamptee - Kapsi Road, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "BHAWANI PETROLEUM",
+      "address": "At Wanadongari, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "MH | Nagpur | Hotel Sunrise N Resorts",
+      "address": "Near Koradi Thermal Power Station, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "ID(mntefc)Xpressway auto service",
+      "address": "Neri, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "ID(csvjzk) Nagpur auto service",
+      "address": "Chinchbhuwan, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "2012977-MHKS FUEL RETAIL",
+      "address": "TEKADI, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "MSEDCL- Model Mill Substation",
+      "address": "Maharashta State Electricity Distribution Company Limited Colony, Model Mill, MSEB Office, Station Road, Ganeshpeth, Nagpur, Maharashtra 440018, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 0
+    },
+    {
+      "name": "MSEB- NARA SUBSTION OFFICE",
+      "address": "13, Bank Colony, Nagpur, Maharashtra 440002, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 0
+    },
+    {
+      "name": "Electreefi- Nagpur Airport (60kw)",
+      "address": "Airport Metro Station, Sonegaon, Nagpur, Maharashtra 440005, India",
+      "connector_types": [
+        "DC",
+        "AC"
+      ],
+      "power_kw": 60
+    },
+    {
+      "name": "RechargeEV- BMW Munich Motor (24kw)",
+      "address": "04, Ring Rd, Wadi, Nagpur, Maharashtra 440028, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 24
+    },
+    {
+      "name": "BPCL- Bharat Petroleum, Petrol Pump -Amin Transport",
+      "address": "Amin Transport, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "BPCL- SHRI BALAJI FILLING STATION",
+      "address": "Shri Balaji Filling Station, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "Tata Power- Hansa Motors'",
+      "address": "Hansa Motors, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "AC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "E-drive- BPCL Wadoda 30KW",
+      "address": "Wadoda, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 30
+    },
+    {
+      "name": "BPCL- BCIC Petrol Pump",
+      "address": "BCIC Petrol Pump, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "BPCL- -Suraj Petroleum",
+      "address": "Suraj Petroleum, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": null
+    },
+    {
+      "name": "E-drive- BPCL United Pump 30KW",
+      "address": "United Pump, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 30
+    },
+    {
+      "name": "E-Drive- BP Chawla 30KW",
+      "address": "Chawla, Nagpur, Maharashtra, India",
+      "connector_types": [
+        "DC"
+      ],
+      "power_kw": 30
+    }
+  ],
+  "total_found": 27
+}

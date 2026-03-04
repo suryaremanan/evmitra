@@ -1,0 +1,2713 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Mitra — India's Honest EV Advisor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a08;
+            --surface: #111110;
+            --border: #242420;
+            --amber: #f5a623;
+            --amber-dim: #7a5212;
+            --green: #4caf7d;
+            --red: #e05252;
+            --text: #e8e6df;
+            --muted: #6b6960;
+            --card: #161614;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* ── Grain overlay ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .wrap {
+            max-width: 680px;
+            margin: 0 auto;
+            padding: 0 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ── Header ── */
+        header {
+            padding: 48px 0 40px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 48px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo-mark {
+            width: 36px;
+            height: 36px;
+            background: var(--amber);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'DM Serif Display', serif;
+            font-size: 18px;
+            color: #000;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .logo-text {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            letter-spacing: -0.3px;
+            color: var(--text);
+        }
+
+        .logo-text span {
+            color: var(--amber);
+        }
+
+        h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(28px, 5vw, 40px);
+            line-height: 1.15;
+            letter-spacing: -0.5px;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+
+        h1 em {
+            font-style: italic;
+            color: var(--amber);
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 14px;
+            font-weight: 300;
+            letter-spacing: 0.3px;
+        }
+
+        /* ── Form ── */
+        .form-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+
+        .form-section {
+            margin-bottom: 28px;
+        }
+
+        .form-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .section-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--amber);
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 6px;
+            font-weight: 400;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px;
+            transition: border-color 0.15s;
+            outline: none;
+            appearance: none;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--amber-dim);
+            box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.06);
+        }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .slider-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            padding: 0;
+            height: 4px;
+            background: var(--border);
+            border: none;
+            border-radius: 2px;
+            cursor: pointer;
+            accent-color: var(--amber);
+        }
+
+        .slider-val {
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            color: var(--amber);
+            min-width: 52px;
+            text-align: right;
+        }
+
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .toggle-label {
+            font-size: 13px;
+            color: var(--text);
+        }
+
+        .toggle-sub {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .toggle {
+            width: 36px;
+            height: 20px;
+            background: var(--border);
+            border-radius: 10px;
+            position: relative;
+            transition: background 0.2s;
+            flex-shrink: 0;
+        }
+
+        .toggle.on {
+            background: var(--amber);
+        }
+
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            top: 3px;
+            left: 3px;
+            transition: left 0.2s;
+        }
+
+        .toggle.on::after {
+            left: 19px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: var(--amber);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.15s, transform 0.1s;
+            letter-spacing: -0.2px;
+            margin-top: 8px;
+        }
+
+        .btn-submit:hover {
+            opacity: 0.92;
+        }
+
+        .btn-submit:active {
+            transform: scale(0.99);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* ── Loading ── */
+        #loading {
+            display: none;
+        }
+
+        .loading-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+
+        .loading-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 18px;
+            margin-bottom: 24px;
+            color: var(--text);
+        }
+
+        .loading-steps {
+            list-style: none;
+        }
+
+        .loading-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--muted);
+            transition: color 0.3s;
+        }
+
+        .loading-step:last-child {
+            border-bottom: none;
+        }
+
+        .loading-step.active {
+            color: var(--text);
+        }
+
+        .loading-step.done {
+            color: var(--green);
+        }
+
+        .step-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--border);
+            flex-shrink: 0;
+            margin-top: 1px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        .loading-step.active .step-icon {
+            background: var(--amber-dim);
+            animation: pulse 1.2s infinite;
+        }
+
+        .loading-step.done .step-icon {
+            background: var(--green);
+            color: #fff;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .progress-bar {
+            height: 2px;
+            background: var(--border);
+            border-radius: 1px;
+            margin-top: 24px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--amber);
+            border-radius: 1px;
+            width: 0%;
+            transition: width 0.8s ease;
+        }
+
+        /* ── Results ── */
+        #results {
+            display: none;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .result-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+        }
+
+        .result-meta {
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            color: var(--muted);
+            text-align: right;
+            line-height: 1.6;
+        }
+
+        /* Score gauges */
+        .scores-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .score-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .score-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+
+        .score-number {
+            font-family: 'DM Serif Display', serif;
+            font-size: 48px;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .score-number.low {
+            color: var(--green);
+        }
+
+        .score-number.medium {
+            color: var(--amber);
+        }
+
+        .score-number.high {
+            color: var(--red);
+        }
+
+        .score-max {
+            font-size: 18px;
+            color: var(--muted);
+        }
+
+        .score-bar {
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 1s ease;
+        }
+
+        .score-fill.low {
+            background: var(--green);
+        }
+
+        .score-fill.medium {
+            background: var(--amber);
+        }
+
+        .score-fill.high {
+            background: var(--red);
+        }
+
+        .score-desc {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        /* Verdict sections */
+        .verdict-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .verdict-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px 24px;
+            animation: fadeUp 0.35s ease both;
+        }
+
+        .verdict-section:nth-child(1) {
+            animation-delay: 0.05s;
+        }
+
+        .verdict-section:nth-child(2) {
+            animation-delay: 0.10s;
+        }
+
+        .verdict-section:nth-child(3) {
+            animation-delay: 0.15s;
+        }
+
+        .verdict-section:nth-child(4) {
+            animation-delay: 0.20s;
+        }
+
+        .verdict-section:nth-child(5) {
+            animation-delay: 0.25s;
+        }
+
+        .vs-header {
+            font-family: 'DM Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .vs-icon {
+            font-size: 15px;
+        }
+
+        .vs-content {
+            font-size: 14px;
+            line-height: 1.75;
+            color: var(--text);
+        }
+
+        .vs-content p {
+            margin-bottom: 10px;
+        }
+
+        .vs-content p:last-child {
+            margin-bottom: 0;
+        }
+
+        .vs-content ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .vs-content ul li {
+            padding-left: 18px;
+            position: relative;
+            line-height: 1.6;
+        }
+
+        .vs-content ul li::before {
+            content: '·';
+            position: absolute;
+            left: 4px;
+            color: var(--amber);
+            font-weight: 700;
+        }
+
+        .vs-content blockquote {
+            border-left: 2px solid var(--amber-dim);
+            padding: 8px 14px;
+            margin: 10px 0;
+            color: var(--muted);
+            font-style: italic;
+            font-size: 13px;
+            background: rgba(245, 166, 35, 0.04);
+            border-radius: 0 6px 6px 0;
+        }
+
+        .score-inline {
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 4px;
+        }
+
+        .score-inline.low {
+            color: var(--green);
+            background: rgba(76, 175, 125, 0.1);
+        }
+
+        .score-inline.med {
+            color: var(--amber);
+            background: rgba(245, 166, 35, 0.1);
+        }
+
+        .score-inline.high {
+            color: var(--red);
+            background: rgba(224, 82, 82, 0.1);
+        }
+
+        /* Final verdict highlight */
+        .final-verdict {
+            background: linear-gradient(135deg, rgba(245, 166, 35, 0.07), rgba(245, 166, 35, 0.02));
+            border: 1px solid var(--amber-dim);
+            border-radius: 14px;
+            padding: 28px;
+            margin-bottom: 20px;
+            animation: fadeUp 0.4s 0.3s ease both;
+        }
+
+        .final-verdict-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--amber);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .final-verdict-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--amber-dim);
+            opacity: 0.5;
+        }
+
+        .final-verdict-text {
+            font-size: 15px;
+            line-height: 1.8;
+            color: var(--text);
+            font-weight: 500;
+        }
+
+        .final-verdict-text p {
+            margin-bottom: 10px;
+        }
+
+        .final-verdict-text p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Sources */
+        .sources {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+        }
+
+        .source-tag {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            padding: 5px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--muted);
+            letter-spacing: 0.3px;
+            line-height: 1.4;
+        }
+
+        .sources-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 8px;
+            opacity: 0.6;
+        }
+
+        .btn-reset {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            cursor: pointer;
+            transition: border-color 0.15s, color 0.15s;
+        }
+
+        .btn-reset:hover {
+            border-color: var(--text);
+            color: var(--text);
+        }
+
+        /* Error */
+        .error-card {
+            background: rgba(224, 82, 82, 0.08);
+            border: 1px solid rgba(224, 82, 82, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: var(--red);
+            display: none;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 24px 0 40px;
+            margin-top: 48px;
+        }
+
+        .footer-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-left {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .tinyfish-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            color: var(--muted);
+            letter-spacing: 0.5px;
+        }
+
+        .tf-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--amber);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        /* Responsive */
+        @media (max-width: 520px) {
+            .field-row {
+                grid-template-columns: 1fr;
+            }
+
+            .scores-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-inner {
+                flex-direction: column;
+                gap: 12px;
+                align-items: flex-start;
+            }
+
+            h1 {
+                font-size: 26px;
+            }
+        }
+
+        /* Animate in */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(16px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeUp 0.4s ease forwards;
+        }
+
+        /* ── Tab bar ── */
+        .tab-bar {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 9px 16px;
+            border: none;
+            border-radius: 7px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s;
+            background: transparent;
+            color: var(--muted);
+        }
+
+        .tab-btn.active {
+            background: var(--amber);
+            color: #000;
+        }
+
+        /* ── Welcome banner ── */
+        .welcome-banner {
+            background: linear-gradient(135deg, rgba(76, 175, 125, 0.08), rgba(76, 175, 125, 0.02));
+            border: 1px solid rgba(76, 175, 125, 0.2);
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            color: var(--text);
+            display: none;
+            animation: fadeUp 0.3s ease;
+            line-height: 1.6;
+        }
+
+        .welcome-banner strong {
+            color: var(--green);
+        }
+
+        /* ── What changed card ── */
+        .what-changed-card {
+            background: linear-gradient(135deg, rgba(76, 175, 125, 0.07), rgba(76, 175, 125, 0.02));
+            border: 1px solid rgba(76, 175, 125, 0.2);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            font-size: 13px;
+            animation: fadeUp 0.3s ease;
+        }
+
+        .wc-title {
+            font-family: 'DM Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 12px;
+        }
+
+        .change-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(76, 175, 125, 0.1);
+        }
+
+        .change-row:last-child {
+            border-bottom: none;
+        }
+
+        .change-label {
+            color: var(--muted);
+        }
+
+        .change-delta {
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .change-delta.worse {
+            color: var(--red);
+        }
+
+        .change-delta.better {
+            color: var(--green);
+        }
+
+        /* ── Static fallback banner ── */
+        .static-banner {
+            background: rgba(224, 82, 82, 0.06);
+            border: 1px solid rgba(224, 82, 82, 0.2);
+            border-radius: 10px;
+            padding: 10px 16px;
+            font-size: 12px;
+            color: var(--red);
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        /* ── Freshness badge ── */
+        .freshness-badge {
+            font-family: 'DM Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 1px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 8px;
+            vertical-align: middle;
+        }
+
+        .freshness-badge.live {
+            background: rgba(76, 175, 125, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(76, 175, 125, 0.3);
+        }
+
+        .freshness-badge.cache {
+            background: rgba(245, 166, 35, 0.08);
+            color: var(--amber);
+            border: 1px solid rgba(245, 166, 35, 0.2);
+        }
+
+        .freshness-badge.static {
+            background: rgba(224, 82, 82, 0.08);
+            color: var(--red);
+            border: 1px solid rgba(224, 82, 82, 0.2);
+        }
+
+        /* ── Compare panel ── */
+        .compare-panel {
+            display: none;
+        }
+
+        .car-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+            max-height: 340px;
+            overflow-y: auto;
+        }
+
+        .car-pick-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: border-color 0.15s;
+            user-select: none;
+        }
+
+        .car-pick-item:hover {
+            border-color: var(--amber-dim);
+        }
+
+        .car-pick-item.selected {
+            border-color: var(--amber);
+            background: rgba(245, 166, 35, 0.04);
+        }
+
+        .car-pick-item input[type=checkbox] {
+            accent-color: var(--amber);
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+        }
+
+        .car-pick-segment {
+            font-size: 10px;
+            color: var(--muted);
+            margin-left: auto;
+            font-family: 'DM Mono', monospace;
+        }
+
+        /* ── Route planner ── */
+        .route-panel {
+            display: none;
+        }
+
+        .route-timeline {
+            display: flex;
+            align-items: center;
+            margin: 24px 0 20px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .rt-city {
+            font-family: 'DM Serif Display', serif;
+            font-size: 15px;
+            white-space: nowrap;
+            color: var(--text);
+            min-width: 60px;
+        }
+
+        .rt-city.rt-end {
+            text-align: right;
+        }
+
+        .rt-line {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            min-width: 24px;
+        }
+
+        .rt-stop {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 0 8px;
+        }
+
+        .rt-stop-dot {
+            width: 32px;
+            height: 32px;
+            background: rgba(245, 166, 35, 0.15);
+            border: 2px solid var(--amber);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .rt-stop-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            color: var(--amber);
+            text-align: center;
+            line-height: 1.4;
+            white-space: nowrap;
+        }
+
+        .rt-stop-label span {
+            color: var(--muted);
+        }
+
+        .stop-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 12px;
+            animation: fadeUp 0.3s ease both;
+        }
+
+        .stop-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .stop-number {
+            font-family: 'DM Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--amber);
+        }
+
+        .stop-charge-badge {
+            font-family: 'DM Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .stop-details {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .stop-details strong {
+            color: var(--text);
+        }
+
+        .trip-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .ts-cell {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .ts-label {
+            font-family: 'DM Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .ts-value {
+            font-family: 'DM Serif Display', serif;
+            font-size: 22px;
+            color: var(--amber);
+        }
+
+        .ts-unit {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .feasibility-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-family: 'DM Mono', monospace;
+            font-size: 11px;
+            margin-bottom: 20px;
+        }
+
+        .feasibility-badge.comfortable {
+            background: rgba(76, 175, 125, 0.12);
+            color: var(--green);
+            border: 1px solid rgba(76, 175, 125, 0.25);
+        }
+
+        .feasibility-badge.manageable {
+            background: rgba(245, 166, 35, 0.10);
+            color: var(--amber);
+            border: 1px solid rgba(245, 166, 35, 0.25);
+        }
+
+        .feasibility-badge.challenging {
+            background: rgba(224, 82, 82, 0.08);
+            color: var(--red);
+            border: 1px solid rgba(224, 82, 82, 0.2);
+        }
+
+        .route-log {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.8;
+            font-family: 'DM Mono', monospace;
+            min-height: 60px;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+
+        /* Compare results table */
+        .compare-table-wrap {
+            overflow-x: auto;
+            margin-top: 8px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            background: var(--card);
+        }
+
+        .compare-table th {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--amber);
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+            background: var(--surface);
+        }
+
+        .compare-table th:first-child {
+            color: var(--muted);
+        }
+
+        .compare-table td {
+            padding: 11px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+            vertical-align: middle;
+        }
+
+        .compare-table td:first-child {
+            font-size: 11px;
+            color: var(--muted);
+            font-family: 'DM Mono', monospace;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
+            background: var(--surface);
+        }
+
+        .compare-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .compare-table tr.best-row td {
+            background: rgba(76, 175, 125, 0.04);
+        }
+
+        .best-for-pill {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            background: rgba(245, 166, 35, 0.08);
+            color: var(--amber);
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        /* Intelligence report */
+        .intel-section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 22px 24px;
+            margin-bottom: 12px;
+            animation: fadeUp 0.35s ease both;
+        }
+
+        .intel-section-title {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--amber);
+            margin-bottom: 14px;
+        }
+
+        .intel-network-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .intel-net-card {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .intel-net-name {
+            font-family: 'DM Mono', monospace;
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: var(--muted);
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .intel-net-stat {
+            font-family: 'DM Serif Display', serif;
+            font-size: 28px;
+            color: var(--text);
+            line-height: 1;
+        }
+
+        .intel-net-sub {
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+        .intel-gap-item {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .intel-gap-item:last-child {
+            border-bottom: none;
+        }
+
+        .intel-gap-item::before {
+            content: '⚠️ ';
+        }
+
+        .intel-opportunity {
+            background: linear-gradient(135deg, rgba(245, 166, 35, 0.07), rgba(245, 166, 35, 0.02));
+            border: 1px solid var(--amber-dim);
+            border-radius: 12px;
+            padding: 18px 20px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--text);
+        }
+
+        .dominant-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .dominant-fill {
+            height: 100%;
+            background: var(--amber);
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="wrap">
+
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <div class="logo-mark">E</div>
+                <span class="logo-text">EV<span>Mitra</span></span>
+            </div>
+            <h1>India's <em>honest</em><br>EV advisor.</h1>
+            <p class="subtitle">Real owner data. Live charger checks. No manufacturer spin.</p>
+        </header>
+
+        <!-- Welcome back banner -->
+        <div id="welcomeBanner" class="welcome-banner"></div>
+
+        <!-- Form -->
+        <div id="formSection">
+            <div class="tab-bar">
+                <button class="tab-btn active" id="tabVerdict" onclick="switchTab('verdict')">Get Verdict</button>
+                <button class="tab-btn" id="tabRoute" onclick="switchTab('route')">Plan a Trip</button>
+                <button class="tab-btn" id="tabCompare" onclick="switchTab('compare')">Compare Cars</button>
+                <button class="tab-btn" id="tabIntel" onclick="switchTab('intel')">Market Intel</button>
+            </div>
+
+            <div class="form-card" id="verdictPanel">
+
+                <div class="form-section">
+                    <span class="section-label">01 — Your City & Car</span>
+                    <div class="field-row">
+                        <div class="field">
+                            <label>City <span id="cityLiveBadge"
+                                    style="display:none;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;background:rgba(76,175,125,0.12);color:var(--green);border:1px solid rgba(76,175,125,0.3);border-radius:4px;padding:1px 6px;margin-left:4px;vertical-align:middle;">⚡
+                                    LIVE</span></label>
+                            <select id="city" onchange="updateCityBadge()">
+                                <option value="Nagpur">Nagpur</option>
+                                <option value="Pune">Pune</option>
+                                <option value="Mumbai">Mumbai</option>
+                                <option value="Delhi">Delhi</option>
+                                <option value="Bangalore">Bangalore</option>
+                                <option value="Hyderabad">Hyderabad</option>
+                                <option value="Chennai">Chennai</option>
+                                <option value="Ahmedabad">Ahmedabad</option>
+                            </select>
+                            <div id="cityStatus"
+                                style="font-size:10px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace;height:14px;">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>EV Model</label>
+                            <select id="carModel">
+                                <option value="Tata Nexon EV Max">Tata Nexon EV Max</option>
+                                <option value="Tata Nexon EV">Tata Nexon EV</option>
+                                <option value="Tata Tiago EV">Tata Tiago EV</option>
+                                <option value="MG Windsor EV">MG Windsor EV</option>
+                                <option value="MG ZS EV">MG ZS EV</option>
+                                <option value="Hyundai Creta Electric">Hyundai Creta Electric</option>
+                                <option value="Hyundai Ioniq 5">Hyundai Ioniq 5</option>
+                                <option value="Kia EV6">Kia EV6</option>
+                                <option value="BYD Atto 3">BYD Atto 3</option>
+                                <option value="Mahindra BE 6">Mahindra BE 6</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <span class="section-label">02 — Your Routes</span>
+
+                    <div class="field">
+                        <label>Daily commute <span style="color:var(--amber)" id="dailyLabel">25 km</span></label>
+                        <div class="slider-wrap">
+                            <input type="range" id="dailyKm" min="5" max="150" value="25"
+                                oninput="document.getElementById('dailyLabel').textContent=this.value+' km'">
+                        </div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:6px">Round trip. Used for daily anxiety
+                            score.</div>
+                    </div>
+
+                    <div class="field">
+                        <label>Occasional long trip <span style="color:var(--amber)" id="occasionalLabel">230
+                                km</span></label>
+                        <div class="slider-wrap">
+                            <input type="range" id="occasionalKm" min="50" max="600" value="230"
+                                oninput="document.getElementById('occasionalLabel').textContent=this.value+' km'">
+                        </div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:6px">One way. e.g. Nagpur → Pune =
+                            230km.</div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <span class="section-label">03 — Charging Setup</span>
+                    <div class="toggle-row" onclick="toggleHomeCharging()">
+                        <div>
+                            <div class="toggle-label">I have home charging</div>
+                            <div class="toggle-sub">Dedicated EV point or 15A socket at home/parking</div>
+                        </div>
+                        <div class="toggle" id="homeToggle"></div>
+                    </div>
+                </div>
+
+                <div id="errorCard" class="error-card"></div>
+
+                <button class="btn-submit" onclick="submitQuery()" id="submitBtn">
+                    Get Honest Verdict →
+                </button>
+            </div>
+
+            <!-- Compare panel -->
+            <div class="compare-panel" id="comparePanel">
+                <div class="form-card">
+                    <div class="form-section">
+                        <span class="section-label">01 — Your Route</span>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>City</label>
+                                <select id="compareCity">
+                                    <option value="Nagpur">Nagpur</option>
+                                    <option value="Pune">Pune</option>
+                                    <option value="Mumbai">Mumbai</option>
+                                    <option value="Delhi">Delhi</option>
+                                    <option value="Bangalore">Bangalore</option>
+                                    <option value="Hyderabad">Hyderabad</option>
+                                    <option value="Chennai">Chennai</option>
+                                    <option value="Ahmedabad">Ahmedabad</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Home charging</label>
+                                <div class="toggle-row" onclick="toggleCompareCharging()" style="height:40px">
+                                    <div class="toggle-label" style="font-size:12px">Home / 15A socket</div>
+                                    <div class="toggle" id="compareToggle"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Daily commute <span style="color:var(--amber)" id="compareDailyLabel">25
+                                    km</span></label>
+                            <div class="slider-wrap">
+                                <input type="range" id="compareDailyKm" min="5" max="150" value="25"
+                                    oninput="document.getElementById('compareDailyLabel').textContent=this.value+' km'">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Occasional trip <span style="color:var(--amber)" id="compareOccLabel">230
+                                    km</span></label>
+                            <div class="slider-wrap">
+                                <input type="range" id="compareOccKm" min="50" max="600" value="230"
+                                    oninput="document.getElementById('compareOccLabel').textContent=this.value+' km'">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <span class="section-label">02 — Pick up to 3 EVs</span>
+                        <div class="car-picker" id="carPicker"></div>
+                        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Select up to 3 cars. Results
+                            ranked by combined anxiety score (lower = better).</div>
+                    </div>
+
+                    <div id="compareError" class="error-card"></div>
+                    <button class="btn-submit" onclick="submitCompare()" id="compareBtn">Compare Cars →</button>
+                </div>
+
+                <div id="compareResults" style="display:none;margin-top:8px"></div>
+            </div>
+
+            <!-- Route planner panel -->
+            <div class="route-panel" id="routePanel">
+                <div class="form-card">
+                    <div class="form-section">
+                        <span class="section-label">01 — Your Trip</span>
+                        <div class="field-row">
+                            <div class="field">
+                                <label>From</label>
+                                <select id="routeFrom">
+                                    <option value="Mumbai">Mumbai</option>
+                                    <option value="Pune">Pune</option>
+                                    <option value="Nagpur">Nagpur</option>
+                                    <option value="Delhi">Delhi</option>
+                                    <option value="Bangalore">Bangalore</option>
+                                    <option value="Hyderabad">Hyderabad</option>
+                                    <option value="Chennai">Chennai</option>
+                                    <option value="Ahmedabad">Ahmedabad</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>To</label>
+                                <select id="routeTo">
+                                    <option value="Goa">Goa</option>
+                                    <option value="Pune">Pune</option>
+                                    <option value="Mumbai">Mumbai</option>
+                                    <option value="Nagpur">Nagpur</option>
+                                    <option value="Delhi">Delhi</option>
+                                    <option value="Agra">Agra</option>
+                                    <option value="Jaipur">Jaipur</option>
+                                    <option value="Bangalore">Bangalore</option>
+                                    <option value="Hyderabad">Hyderabad</option>
+                                    <option value="Chennai">Chennai</option>
+                                    <option value="Ahmedabad">Ahmedabad</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>EV Model</label>
+                            <select id="routeCar">
+                                <option value="Tata Nexon EV Max">Tata Nexon EV Max</option>
+                                <option value="Tata Nexon EV">Tata Nexon EV</option>
+                                <option value="Tata Tiago EV">Tata Tiago EV</option>
+                                <option value="MG Windsor EV">MG Windsor EV</option>
+                                <option value="MG ZS EV">MG ZS EV</option>
+                                <option value="Hyundai Creta Electric">Hyundai Creta Electric</option>
+                                <option value="Hyundai Ioniq 5">Hyundai Ioniq 5</option>
+                                <option value="Kia EV6">Kia EV6</option>
+                                <option value="BYD Atto 3">BYD Atto 3</option>
+                                <option value="Mahindra BE 6">Mahindra BE 6</option>
+                            </select>
+                        </div>
+                        <div style="font-size:11px;color:var(--muted);margin-top:-8px">
+                            Assumes starting with a full charge. Uses Team-BHP confirmed highway range.
+                        </div>
+                    </div>
+
+                    <div id="routeError" class="error-card"></div>
+
+                    <!-- Live TinyFish log for route -->
+                    <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;display:flex;align-items:center;gap:8px;"
+                        id="routeLogHeader" style="display:none">
+                        <div class="tf-dot"></div>
+                        TinyFish — Live Charger Scrape
+                    </div>
+                    <div class="route-log" id="routeLog" style="display:none"></div>
+
+                    <button class="btn-submit" onclick="submitRoute()" id="routeBtn" style="margin-top:16px">
+                        Plan My Trip →
+                    </button>
+                </div>
+
+                <div id="routeResults" style="display:none;margin-top:8px"></div>
+            </div>
+
+            <!-- Intelligence Report panel -->
+            <div class="route-panel" id="intelPanel">
+                <div class="form-card">
+                    <div class="form-section">
+                        <span class="section-label">Market Intelligence — For Fleet Operators & Charging Networks</span>
+                        <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Scrapes all major charging
+                            networks for a city simultaneously and produces a competitive gap analysis. Useful for fleet
+                            operators, city planners, and charging network expansion decisions.</p>
+                        <div class="field">
+                            <label>City to Analyse</label>
+                            <select id="intelCity">
+                                <option value="Bangalore">Bangalore</option>
+                                <option value="Mumbai">Mumbai</option>
+                                <option value="Delhi">Delhi</option>
+                                <option value="Pune">Pune</option>
+                                <option value="Nagpur">Nagpur</option>
+                                <option value="Hyderabad">Hyderabad</option>
+                                <option value="Chennai">Chennai</option>
+                                <option value="Ahmedabad">Ahmedabad</option>
+                            </select>
+                        </div>
+                        <div id="intelError" class="error-card"></div>
+                        <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;display:none;align-items:center;gap:8px;"
+                            id="intelLogHeader">
+                            <div class="tf-dot"></div>
+                            TinyFish — Live Multi-Network Scrape
+                        </div>
+                        <div class="route-log" id="intelLog" style="display:none"></div>
+                        <button class="btn-submit" onclick="submitIntel()" id="intelBtn" style="margin-top:16px">
+                            Run Market Analysis →
+                        </button>
+                    </div>
+                </div>
+                <div id="intelResults" style="display:none;margin-top:8px"></div>
+            </div>
+
+        </div>
+
+        <!-- Loading -->
+        <div id="loading">
+            <div class="loading-card animate-in">
+                <div class="loading-title" id="loadingTitle">Checking live data for you...</div>
+
+                <!-- Phase 1: TinyFish live stream events -->
+                <div id="livePhase">
+                    <div
+                        style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                        <div class="tf-dot"></div>
+                        TinyFish Live Web Agent
+                    </div>
+                    <div id="liveLog"
+                        style="font-size:12px;color:var(--muted);line-height:1.8;font-family:'DM Mono',monospace;min-height:80px;max-height:160px;overflow-y:auto;">
+                    </div>
+                </div>
+
+                <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+
+                <!-- Phase 2: Synthesis steps -->
+                <ul class="loading-steps" id="loadingSteps">
+                    <li class="loading-step" data-step="0">
+                        <div class="step-icon"></div>
+                        <span>Live charger data from Statiq network</span>
+                    </li>
+                    <li class="loading-step" data-step="1">
+                        <div class="step-icon"></div>
+                        <span>Reading Team-BHP ownership threads</span>
+                    </li>
+                    <li class="loading-step" data-step="2">
+                        <div class="step-icon"></div>
+                        <span>Calculating charging anxiety scores</span>
+                    </li>
+                    <li class="loading-step" data-step="3">
+                        <div class="step-icon"></div>
+                        <span>Synthesising honest verdict — no spin</span>
+                    </li>
+                </ul>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results">
+
+            <div class="result-header">
+                <div class="result-title" id="resultTitle">Your EV Verdict</div>
+                <div class="result-meta" id="resultMeta"></div>
+            </div>
+
+            <!-- Scores -->
+            <div class="scores-grid">
+                <div class="score-card">
+                    <div class="score-label">Daily Commute</div>
+                    <div class="score-number" id="dailyScoreNum">—</div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="dailyScoreBar" style="width:0%"></div>
+                    </div>
+                    <div class="score-desc" id="dailyScoreDesc"></div>
+                </div>
+                <div class="score-card">
+                    <div class="score-label">Long Trips</div>
+                    <div class="score-number" id="occasionalScoreNum">—</div>
+                    <div class="score-bar">
+                        <div class="score-fill" id="occasionalScoreBar" style="width:0%"></div>
+                    </div>
+                    <div class="score-desc" id="occasionalScoreDesc"></div>
+                </div>
+            </div>
+
+            <!-- Charger stats -->
+            <div id="freshnessBannerStatic" class="static-banner">🔴 Static data — live charger scrape unavailable.
+                Station counts may be outdated.</div>
+            <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:flex-start"
+                id="chargerStats"></div>
+
+            <!-- What changed since last check -->
+            <div id="whatChangedCard" style="display:none" class="what-changed-card"></div>
+
+            <!-- Verdict body -->
+            <div class="verdict-body" id="verdictBody"></div>
+
+            <!-- Final verdict -->
+            <div class="final-verdict" id="finalVerdictCard" style="display:none">
+                <div class="final-verdict-label">🎯 Honest Verdict</div>
+                <div class="final-verdict-text" id="finalVerdictText"></div>
+            </div>
+
+            <!-- Sources -->
+            <div style="margin-bottom:32px">
+                <div class="sources-label">Data sources</div>
+                <div class="sources" id="sourcesList"></div>
+            </div>
+
+            <button class="btn-reset" onclick="reset()">← Try another city or car</button>
+
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <div class="footer-inner">
+                <div class="footer-left">
+                    Data from Statiq, Team-BHP, India EV Policy.<br>
+                    Verify subsidies and charger status before purchase.
+                </div>
+                <div class="tinyfish-badge">
+                    <div class="tf-dot"></div>
+                    Powered by TinyFish
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        // ── Car registry (mirrors car_profiles.py) ──
+        const CAR_REGISTRY = [
+            { model: 'Tata Nexon EV Max', segment: 'compact SUV' },
+            { model: 'Tata Nexon EV', segment: 'compact SUV' },
+            { model: 'Tata Tiago EV', segment: 'hatchback' },
+            { model: 'MG Windsor EV', segment: 'crossover' },
+            { model: 'MG ZS EV', segment: 'mid-size SUV' },
+            { model: 'Hyundai Creta Electric', segment: 'compact SUV' },
+            { model: 'Hyundai Ioniq 5', segment: 'premium crossover' },
+            { model: 'Kia EV6', segment: 'premium crossover' },
+            { model: 'BYD Atto 3', segment: 'mid-size SUV' },
+            { model: 'Mahindra BE 6', segment: 'electric SUV' },
+        ];
+
+        // ── User ID (persistent via localStorage) ──
+        function getUserId() {
+            let uid = localStorage.getItem('ev_mitra_user_id');
+            if (!uid) {
+                uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                    ? crypto.randomUUID()
+                    : 'u-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9);
+                localStorage.setItem('ev_mitra_user_id', uid);
+            }
+            return uid;
+        }
+
+        // ── Load profile & pre-fill form ──
+        async function loadProfile() {
+            const uid = getUserId();
+            try {
+                const resp = await fetch(`http://localhost:8080/profile/${uid}`);
+                if (!resp.ok) return;
+                const { profile } = await resp.json();
+                if (!profile) return;
+
+                if (profile.preferred_city) document.getElementById('city').value = profile.preferred_city;
+                if (profile.preferred_car) document.getElementById('carModel').value = profile.preferred_car;
+                if (profile.preferred_daily_km) {
+                    document.getElementById('dailyKm').value = profile.preferred_daily_km;
+                    document.getElementById('dailyLabel').textContent = profile.preferred_daily_km + ' km';
+                }
+                if (profile.preferred_occasional_km) {
+                    document.getElementById('occasionalKm').value = profile.preferred_occasional_km;
+                    document.getElementById('occasionalLabel').textContent = profile.preferred_occasional_km + ' km';
+                }
+                if (profile.has_home_charging) {
+                    homeCharging = !!profile.has_home_charging;
+                    document.getElementById('homeToggle').classList.toggle('on', homeCharging);
+                }
+
+                // Welcome back banner
+                const banner = document.getElementById('welcomeBanner');
+                banner.innerHTML = `👋 Welcome back! Last checked: <strong>${profile.preferred_car || 'EV'}</strong> in <strong>${profile.preferred_city || 'your city'}</strong>. Form pre-filled with your last settings.`;
+                banner.style.display = 'block';
+
+            } catch (e) { /* backend not ready */ }
+        }
+
+        // ── State ──
+        let homeCharging = false;
+        let compareCharging = false;
+        let selectedCars = new Set();
+
+        function toggleHomeCharging() {
+            homeCharging = !homeCharging;
+            document.getElementById('homeToggle').classList.toggle('on', homeCharging);
+        }
+
+        function toggleCompareCharging() {
+            compareCharging = !compareCharging;
+            document.getElementById('compareToggle').classList.toggle('on', compareCharging);
+        }
+
+        // ── Score helpers ──
+        function scoreClass(n) {
+            if (n <= 3) return 'low';
+            if (n <= 6) return 'medium';
+            return 'high';
+        }
+
+        function scoreLabel(n) {
+            if (n <= 2) return 'Very relaxed';
+            if (n <= 4) return 'Manageable';
+            if (n <= 6) return 'Plan carefully';
+            if (n <= 8) return 'High anxiety';
+            return 'Not recommended';
+        }
+
+        // ── Live TinyFish log ──
+        function appendLog(msg, type) {
+            const log = document.getElementById('liveLog');
+            const icons = { STATUS: '🔗', PROGRESS: '⚡', COMPLETE: '✅', ERROR: '❌' };
+            const icon = icons[type] || '·';
+            const line = document.createElement('div');
+            // Truncate very long messages
+            const truncated = msg.length > 80 ? msg.slice(0, 80) + '…' : msg;
+            line.textContent = `${icon} ${truncated}`;
+            if (type === 'COMPLETE') line.style.color = 'var(--green)';
+            if (type === 'ERROR') line.style.color = 'var(--red)';
+            if (type === 'STATUS') line.style.color = 'var(--amber)';
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // ── Markdown → HTML converter ──
+        function mdToHtml(text) {
+            // Split into paragraphs/blocks, handling bullet lists
+            const lines = text.split('\n');
+            const blocks = [];
+            let listItems = [];
+
+            function flushList() {
+                if (listItems.length) {
+                    blocks.push('<ul>' + listItems.map(li => `<li>${li}</li>`).join('') + '</ul>');
+                    listItems = [];
+                }
+            }
+
+            lines.forEach(line => {
+                const t = line.trim();
+                if (!t) {
+                    flushList();
+                    return;
+                }
+                // Bullet list items
+                if (/^[-*•]\s+/.test(t)) {
+                    listItems.push(inlineMd(t.replace(/^[-*•]\s+/, '')));
+                    return;
+                }
+                // Numbered list
+                if (/^\d+\.\s+/.test(t)) {
+                    listItems.push(inlineMd(t.replace(/^\d+\.\s+/, '')));
+                    return;
+                }
+                flushList();
+                // Quoted lines (starts/ends with * or ")
+                if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith('*"') && t.endsWith('"*'))) {
+                    blocks.push(`<blockquote>${inlineMd(t.replace(/^\*?"?|"?\*?$/g, ''))}</blockquote>`);
+                    return;
+                }
+                blocks.push(`<p>${inlineMd(t)}</p>`);
+            });
+            flushList();
+            return blocks.join('');
+        }
+
+        function inlineMd(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                // Highlight score numbers like 3/10, 9/10
+                .replace(/\b(\d+)\/10\b/g, (_, n) => {
+                    const cls = n <= 3 ? 'low' : n <= 6 ? 'med' : 'high';
+                    return `<span class="score-inline ${cls}">${n}/10</span>`;
+                })
+                // ₹ amounts bold-ish
+                .replace(/(₹[\d,]+(?:\.\d+)?(?:\s*(?:lakhs?|crores?|\/km))?)/gi,
+                    '<strong>$1</strong>');
+        }
+
+        // ── Parse verdict text into sections ──
+        function parseVerdict(text) {
+            const emojiMap = {
+                '🔋': { icon: '🔋', label: 'CHARGING ANXIETY SCORE' },
+                '📊': { icon: '📊', label: 'REAL OWNER EXPERIENCE' },
+                '⚠': { icon: '⚠️', label: 'THINGS NOBODY TELLS YOU' },
+                '💚': { icon: '💚', label: "WHAT'S GENUINELY GREAT" },
+                '💰': { icon: '💰', label: 'YOUR ACTUAL NUMBERS' },
+                '🎯': { icon: '🎯', label: 'HONEST VERDICT' },
+            };
+
+            const sections = [];
+            let currentSection = null;
+            let currentLines = [];
+            let hasEmoji = false;
+
+            // Pre-process: strip markdown artifacts the LLM sometimes adds
+            const cleaned = text
+                .replace(/^#{1,3}\s*/gm, '')   // strip # ## ### prefixes
+                .replace(/^---+$/gm, '')         // strip --- dividers
+                .replace(/^\*{3,}$/gm, '');      // strip *** dividers
+
+            cleaned.split('\n').forEach(line => {
+                const trimmed = line.trim();
+                // Check if line starts with a known emoji (after stripping # prefixes)
+                const emoji = Object.keys(emojiMap).find(e => trimmed.startsWith(e));
+                if (emoji) {
+                    if (currentSection) {
+                        sections.push({ ...currentSection, content: currentLines.join('\n').trim() });
+                        currentLines = [];
+                    }
+                    currentSection = emojiMap[emoji];
+                    hasEmoji = true;
+                } else if (currentSection) {
+                    currentLines.push(line);
+                }
+                // Lines before first section (LLM title etc.) are discarded
+            });
+
+            if (currentSection && currentLines.length) {
+                sections.push({ ...currentSection, content: currentLines.join('\n').trim() });
+            }
+
+            if (!hasEmoji) {
+                sections.push({ icon: '📋', label: 'VERDICT', content: cleaned.trim() });
+            }
+
+            return sections;
+        }
+
+        // ── Render results ──
+        function renderResults(data) {
+            const { city, car, daily_km, occasional_km, scores, verdict, sources_used, data_freshness, what_changed } = data;
+
+            // Header
+            document.getElementById('resultTitle').textContent = `${city} — ${car}`;
+            document.getElementById('resultMeta').innerHTML =
+                `${daily_km}km daily · ${occasional_km}km occasional<br>${scores.total_stations} stations checked`;
+
+            // Scores
+            const ds = scores.daily_score;
+            const os = scores.occasional_score;
+            const dc = scoreClass(ds);
+            const oc = scoreClass(os);
+
+            document.getElementById('dailyScoreNum').textContent = `${ds}`;
+            document.getElementById('dailyScoreNum').className = `score-number ${dc}`;
+            document.getElementById('dailyScoreBar').style.width = `${ds * 10}%`;
+            document.getElementById('dailyScoreBar').className = `score-fill ${dc}`;
+            document.getElementById('dailyScoreDesc').textContent = scoreLabel(ds);
+
+            document.getElementById('occasionalScoreNum').textContent = `${os}`;
+            document.getElementById('occasionalScoreNum').className = `score-number ${oc}`;
+            document.getElementById('occasionalScoreBar').style.width = `${os * 10}%`;
+            document.getElementById('occasionalScoreBar').className = `score-fill ${oc}`;
+            document.getElementById('occasionalScoreDesc').textContent = scoreLabel(os);
+
+            // Data freshness
+            const chargerSrc = data_freshness?.chargers?.source_type || 'static_fallback';
+            const chargerAge = data_freshness?.chargers?.age_minutes;
+            const freshnessBadgeMap = {
+                live: { cls: 'live', text: '🟢 LIVE — just scraped' },
+                cache: { cls: 'cache', text: `🟡 CACHED${chargerAge != null ? ' · ' + chargerAge + 'm ago' : ''}` },
+                static_fallback: { cls: 'static', text: '🔴 STATIC — no live data' },
+            };
+            const fb = freshnessBadgeMap[chargerSrc] || freshnessBadgeMap.static_fallback;
+
+            // Show static banner if needed
+            document.getElementById('freshnessBannerStatic').style.display =
+                chargerSrc === 'static_fallback' ? 'block' : 'none';
+
+            // Charger stats
+            const stats = [
+                { label: 'Total stations', value: scores.total_stations },
+                { label: 'Fast DC chargers', value: scores.fast_dc_chargers },
+                { label: '≥50kW chargers', value: scores.high_power_chargers_50kw_plus },
+                { label: 'Real range used', value: `${scores.real_range_used_km || 180}km` },
+            ];
+            document.getElementById('chargerStats').innerHTML =
+                `<div style="width:100%;margin-bottom:4px"><span class="freshness-badge ${fb.cls}">${fb.text}</span></div>` +
+                stats.map(s => `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 16px;flex:1;min-width:120px">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">${s.label}</div>
+      <div style="font-size:18px;font-weight:600;color:var(--amber)">${s.value}</div>
+    </div>
+  `).join('');
+
+            // What changed since last check
+            const wcCard = document.getElementById('whatChangedCard');
+            if (what_changed && Object.keys(what_changed.changes || {}).length > 0) {
+                const changes = what_changed.changes;
+                const prevDate = what_changed.previous_check
+                    ? new Date(what_changed.previous_check).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+                    : 'last check';
+                const rows = Object.entries(changes).map(([key, ch]) => {
+                    const label = key === 'daily_score' ? 'Daily anxiety score'
+                        : key === 'occasional_score' ? 'Long trip score'
+                            : 'Charging stations';
+                    const delta = ch.delta;
+                    const cls = (key.includes('score') && delta > 0) || (key === 'total_stations' && delta < 0)
+                        ? 'worse' : 'better';
+                    const arrow = delta > 0 ? '↑' : '↓';
+                    return `<div class="change-row">
+                        <span class="change-label">${label}</span>
+                        <span class="change-delta ${cls}">${ch.from} → ${ch.to} (${arrow}${Math.abs(delta)})</span>
+                    </div>`;
+                }).join('');
+                wcCard.innerHTML = `<div class="wc-title">Since your last check (${prevDate})</div>${rows}`;
+                wcCard.style.display = 'block';
+            } else {
+                wcCard.style.display = 'none';
+            }
+
+            // Parse and render verdict sections
+            const sections = parseVerdict(verdict);
+            let finalVerdictContent = '';
+            const bodySections = [];
+
+            sections.forEach(section => {
+                if (section.label === 'HONEST VERDICT' || section.icon === '🎯') {
+                    finalVerdictContent = section.content;
+                } else {
+                    bodySections.push(section);
+                }
+            });
+
+            document.getElementById('verdictBody').innerHTML = bodySections.map(s => `
+    <div class="verdict-section">
+      <div class="vs-header">
+        <span class="vs-icon">${s.icon}</span>
+        ${s.label}
+      </div>
+      <div class="vs-content">${mdToHtml(s.content)}</div>
+    </div>
+  `).join('');
+
+            if (finalVerdictContent) {
+                document.getElementById('finalVerdictText').innerHTML = mdToHtml(finalVerdictContent);
+                document.getElementById('finalVerdictCard').style.display = 'block';
+            }
+
+            // Sources
+            document.getElementById('sourcesList').innerHTML = (sources_used || []).map(s => `
+    <span class="source-tag">${s}</span>
+  `).join('');
+
+            // Show results
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('results').classList.add('animate-in');
+            document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ── City live badge ──
+        let cityCache = {};
+
+        async function initCityBadges() {
+            try {
+                const resp = await fetch('http://localhost:8080/cache-status');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                cityCache = data.charger_cache || {};
+                updateCityBadge();
+            } catch (e) { /* backend not running yet */ }
+        }
+
+        function updateCityBadge() {
+            const city = document.getElementById('city').value;
+            const badge = document.getElementById('cityLiveBadge');
+            const status = document.getElementById('cityStatus');
+            const entry = cityCache[city];
+            if (entry && entry.cached) {
+                badge.style.display = 'inline';
+                if (entry.fresh) {
+                    badge.textContent = '⚡ LIVE';
+                    badge.style.color = 'var(--green)';
+                    badge.style.background = 'rgba(76,175,125,0.12)';
+                    badge.style.borderColor = 'rgba(76,175,125,0.3)';
+                    status.textContent = entry.age_min !== null
+                        ? `Live data · updated ${entry.age_min}m ago · ${entry.stations} stations`
+                        : `Cached data · ${entry.stations} stations`;
+                } else {
+                    badge.textContent = '📦 CACHED';
+                    badge.style.color = 'var(--amber)';
+                    badge.style.background = 'rgba(245,166,35,0.08)';
+                    badge.style.borderColor = 'rgba(245,166,35,0.2)';
+                    status.textContent = `Static data available · ${entry.stations} stations`;
+                }
+            } else {
+                badge.style.display = 'none';
+                status.textContent = 'Will scrape live via TinyFish';
+            }
+        }
+
+        // ── Event type → loading UI mappings ──
+        const EVENT_STEP_MAP = {
+            'SCRAPING_CHARGERS': { step: 0, title: '🌐 Checking live charger stations...' },
+            'CHARGERS_DONE': { step: 0, done: true },
+            'SCRAPING_TEAMBHP': { step: 1, title: '📖 Reading Team-BHP owner reports...' },
+            'TEAMBHP_DONE': { step: 1, done: true },
+            'SCORING': { step: 2, title: '📊 Scoring your routes...' },
+            'LLM': { step: 3, title: '🤖 Synthesising your verdict...' },
+        };
+
+        function setStep(stepIndex, done) {
+            const steps = document.querySelectorAll('.loading-step');
+            if (done) {
+                steps[stepIndex].className = 'loading-step done';
+                steps[stepIndex].querySelector('.step-icon').textContent = '✓';
+                document.getElementById('progressFill').style.width =
+                    `${10 + ((stepIndex + 1) / steps.length) * 85}%`;
+            } else {
+                // Mark prior steps done
+                for (let i = 0; i < stepIndex; i++) {
+                    steps[i].className = 'loading-step done';
+                    steps[i].querySelector('.step-icon').textContent = '✓';
+                }
+                steps[stepIndex].className = 'loading-step active';
+                document.getElementById('progressFill').style.width =
+                    `${10 + (stepIndex / steps.length) * 85}%`;
+            }
+        }
+
+        // ── Submit — unified /verdict/stream (Fix 2) ──
+        async function submitQuery() {
+            const city = document.getElementById('city').value;
+            const daily_km = parseInt(document.getElementById('dailyKm').value);
+            const occasional_km = parseInt(document.getElementById('occasionalKm').value);
+            const car_model = document.getElementById('carModel').value;
+
+            // Reset UI
+            document.getElementById('errorCard').style.display = 'none';
+            document.getElementById('liveLog').innerHTML = '';
+            document.getElementById('formSection').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('progressFill').style.width = '5%';
+            document.getElementById('loadingTitle').textContent = 'Connecting to TinyFish...';
+
+            // Reset synthesis steps
+            document.querySelectorAll('.loading-step').forEach(s => {
+                s.className = 'loading-step';
+                s.querySelector('.step-icon').textContent = '';
+            });
+
+            appendLog(`Starting analysis for ${city} — ${car_model}...`, 'STATUS');
+
+            try {
+                const resp = await fetch('http://localhost:8080/verdict/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        city, daily_km, occasional_km, car_model,
+                        has_home_charging: homeCharging,
+                        user_description: '',
+                        user_id: getUserId(),
+                    }),
+                });
+
+                if (!resp.ok) throw new Error(`Backend returned ${resp.status}`);
+
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buf += decoder.decode(value, { stream: true });
+                    const lines = buf.split('\n');
+                    buf = lines.pop();
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        let event;
+                        try { event = JSON.parse(line.slice(6)); }
+                        catch (e) { continue; }
+
+                        const { type, message, data } = event;
+
+                        if (type === 'COMPLETE') {
+                            // Update city cache badge
+                            if (data) {
+                                cityCache[city] = { cached: true, fresh: true, age_min: 0, stations: data.scores?.total_stations || 0 };
+                                updateCityBadge();
+                            }
+                            // Finish all steps
+                            document.querySelectorAll('.loading-step').forEach(s => {
+                                s.className = 'loading-step done';
+                                s.querySelector('.step-icon').textContent = '✓';
+                            });
+                            document.getElementById('progressFill').style.width = '100%';
+                            appendLog('Verdict ready ✓', 'COMPLETE');
+                            setTimeout(() => {
+                                document.getElementById('loading').style.display = 'none';
+                                renderResults(data);
+                            }, 500);
+                            return;
+
+                        } else if (type === 'ERROR') {
+                            throw new Error(message || 'Backend error');
+
+                        } else {
+                            // Progress events
+                            const mapping = EVENT_STEP_MAP[type];
+                            if (mapping) {
+                                if (mapping.title) {
+                                    document.getElementById('loadingTitle').textContent = mapping.title;
+                                }
+                                if (mapping.done) {
+                                    setStep(mapping.step, true);
+                                } else {
+                                    setStep(mapping.step, false);
+                                }
+                            }
+                            if (message) appendLog(message, type === 'SCRAPING_CHARGERS' || type === 'SCRAPING_TEAMBHP' ? 'STATUS' : 'PROGRESS');
+                        }
+                    }
+                }
+
+            } catch (err) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('formSection').style.display = 'block';
+                document.getElementById('submitBtn').disabled = false;
+
+                const errorCard = document.getElementById('errorCard');
+                errorCard.style.display = 'block';
+                if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+                    errorCard.textContent = '⚠️  Cannot reach backend. Make sure you ran: python backend.py';
+                } else {
+                    errorCard.textContent = `⚠️  ${err.message}`;
+                }
+            }
+        }
+
+        // ── Reset ──
+        function reset() {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('formSection').style.display = 'block';
+            document.getElementById('submitBtn').disabled = false;
+            document.getElementById('errorCard').style.display = 'none';
+            document.getElementById('liveLog').innerHTML = '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            updateCityBadge();
+        }
+
+        // Allow Enter key to submit
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Enter' && document.getElementById('formSection').style.display !== 'none') {
+                submitQuery();
+            }
+        });
+
+        // ── Tab switching (4 tabs) ──
+        function switchTab(tab) {
+            document.getElementById('verdictPanel').style.display = tab === 'verdict' ? 'block' : 'none';
+            document.getElementById('routePanel').style.display = tab === 'route' ? 'block' : 'none';
+            document.getElementById('comparePanel').style.display = tab === 'compare' ? 'block' : 'none';
+            document.getElementById('intelPanel').style.display = tab === 'intel' ? 'block' : 'none';
+            ['verdict', 'route', 'compare', 'intel'].forEach(t => {
+                const el = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
+                if (el) el.className = 'tab-btn' + (t === tab ? ' active' : '');
+            });
+        }
+
+        // ── Intelligence report ──
+        async function submitIntel() {
+            const city = document.getElementById('intelCity').value;
+            const btn = document.getElementById('intelBtn');
+            const logEl = document.getElementById('intelLog');
+            const logHeader = document.getElementById('intelLogHeader');
+            const errEl = document.getElementById('intelError');
+            const resultsEl = document.getElementById('intelResults');
+
+            btn.disabled = true;
+            btn.textContent = 'Scraping…';
+            errEl.style.display = 'none';
+            resultsEl.style.display = 'none';
+            logEl.style.display = 'block';
+            logHeader.style.display = 'flex';
+            logEl.textContent = '';
+
+            try {
+                const resp = await fetch('http://localhost:8080/intelligence-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ city, report_type: 'charger_gap_analysis' }),
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                // Stream SSE events
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = '';
+                let data = null;
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, { stream: true });
+                    const lines = buf.split('\n');
+                    buf = lines.pop();
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        const evt = JSON.parse(line.slice(6));
+                        if (evt.type === 'SCANNING') {
+                            logEl.textContent = evt.message;
+                        } else if (evt.type === 'NETWORK_DONE') {
+                            logEl.textContent += `\n✅ ${evt.network}: ${evt.stations_found} stations found`;
+                        } else if (evt.type === 'COMPLETE') {
+                            data = evt;
+                        } else if (evt.type === 'ERROR') {
+                            throw new Error(evt.message);
+                        }
+                    }
+                }
+
+                if (!data) throw new Error('No data received from server');
+                logEl.textContent += `\n\nDone — ${data.total_stations_all_networks} total stations scraped.`;
+
+                // ── Build result HTML ──
+                const netCards = Object.entries(data.network_breakdown || {}).map(([name, b]) => `
+                    <div class="intel-net-card">
+                        <div class="intel-net-name">${name}</div>
+                        <div class="intel-net-stat">${b.total}</div>
+                        <div class="intel-net-sub">${b.dc_chargers} DC · ${b.fast_dc_50kw_plus} fast ≥50kW</div>
+                        <div class="dominant-bar"><div class="dominant-fill" style="width:${Math.round(b.dc_chargers / Math.max(data.dc_fast_chargers, 1) * 100)}%"></div></div>
+                    </div>`).join('');
+
+                const gaps = (data.gaps_and_risks || []).map(g => `<div class="intel-gap-item">${g}</div>`).join('');
+
+                const freshBadge = data.data_freshness?.source_type === 'live'
+                    ? '<span class="freshness-badge live">🟢 LIVE SCRAPE</span>'
+                    : '<span class="freshness-badge static">🔴 STATIC</span>';
+
+                resultsEl.innerHTML = `
+                    <div class="intel-section" style="animation-delay:0.05s">
+                        <div class="intel-section-title">Network Coverage — ${city} &nbsp;${freshBadge}</div>
+                        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+                            <div style="text-align:center">
+                                <div style="font-family:'DM Serif Display',serif;font-size:36px;color:var(--amber)">${data.total_stations_all_networks}</div>
+                                <div style="font-size:11px;color:var(--muted)">Total stations</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div style="font-family:'DM Serif Display',serif;font-size:36px;color:var(--green)">${data.dc_fast_chargers}</div>
+                                <div style="font-size:11px;color:var(--muted)">DC fast chargers</div>
+                            </div>
+                            <div style="text-align:center">
+                                <div style="font-family:'DM Serif Display',serif;font-size:36px;color:${data.fast_50kw_plus >= 5 ? 'var(--green)' : 'var(--red)'}">${data.fast_50kw_plus}</div>
+                                <div style="font-size:11px;color:var(--muted)">≥50kW fast</div>
+                            </div>
+                        </div>
+                        <div class="intel-network-grid">${netCards}</div>
+                        <div style="font-size:12px;color:var(--muted);margin-top:10px">
+                            Dominant network: <strong style="color:var(--text)">${data.dominant_network}</strong>
+                            controls ${data.dominant_dc_share_pct}% of DC capacity
+                        </div>
+                    </div>
+
+                    <div class="intel-section" style="animation-delay:0.1s">
+                        <div class="intel-section-title">⚠️ Gaps &amp; Risks Identified</div>
+                        ${gaps || '<div class="intel-gap-item">No critical gaps detected.</div>'}
+                    </div>
+
+                    <div class="intel-section" style="animation-delay:0.15s">
+                        <div class="intel-section-title">💡 Market Opportunity</div>
+                        <div class="intel-opportunity">${data.opportunity}</div>
+                    </div>
+
+                    <div style="margin-top:12px">
+                        <button class="btn-reset" onclick="document.getElementById('intelResults').style.display='none';document.getElementById('intelLog').style.display='none';document.getElementById('intelLogHeader').style.display='none';">
+                            ← New Analysis
+                        </button>
+                    </div>`;
+
+                resultsEl.style.display = 'block';
+            } catch (e) {
+                errEl.textContent = '⚠️ Analysis failed: ' + e.message;
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Market Analysis →';
+            }
+        }
+
+        // ── Compare car picker ──
+        function initCarPicker() {
+            const picker = document.getElementById('carPicker');
+            picker.innerHTML = CAR_REGISTRY.map(({ model, segment }) => `
+                <div class="car-pick-item" id="pick-${model.replace(/\s/g, '_')}" onclick="toggleCarPick(this,'${model}')">
+                    <input type="checkbox" id="chk-${model.replace(/\s/g, '_')}" onclick="event.stopPropagation()">
+                    <span>${model}</span>
+                    <span class="car-pick-segment">${segment}</span>
+                </div>`).join('');
+        }
+
+        function toggleCarPick(el, model) {
+            const chk = el.querySelector('input[type=checkbox]');
+            if (selectedCars.has(model)) {
+                selectedCars.delete(model);
+                chk.checked = false;
+                el.classList.remove('selected');
+            } else {
+                if (selectedCars.size >= 3) {
+                    document.getElementById('compareError').textContent = '⚠️ Max 3 cars for comparison.';
+                    document.getElementById('compareError').style.display = 'block';
+                    return;
+                }
+                document.getElementById('compareError').style.display = 'none';
+                selectedCars.add(model);
+                chk.checked = true;
+                el.classList.add('selected');
+            }
+        }
+
+        async function submitCompare() {
+            if (selectedCars.size < 1) {
+                document.getElementById('compareError').textContent = '⚠️ Select at least 1 car.';
+                document.getElementById('compareError').style.display = 'block';
+                return;
+            }
+            document.getElementById('compareError').style.display = 'none';
+            const btn = document.getElementById('compareBtn');
+            btn.disabled = true;
+            btn.textContent = 'Comparing…';
+
+            try {
+                const resp = await fetch('http://localhost:8080/compare', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        city: document.getElementById('compareCity').value,
+                        daily_km: parseInt(document.getElementById('compareDailyKm').value),
+                        occasional_km: parseInt(document.getElementById('compareOccKm').value),
+                        has_home_charging: compareCharging,
+                        car_models: Array.from(selectedCars),
+                    }),
+                });
+                if (!resp.ok) throw new Error(`Backend error ${resp.status}`);
+                const data = await resp.json();
+                renderCompare(data);
+            } catch (err) {
+                document.getElementById('compareError').textContent = `⚠️ ${err.message}`;
+                document.getElementById('compareError').style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Compare Cars →';
+            }
+        }
+
+        function renderCompare(data) {
+            const { city, daily_km, occasional_km, cars, charger_source_type, total_city_stations } = data;
+            if (!cars || !cars.length) return;
+
+            const fmt = n => n >= 100000
+                ? '₹' + (n / 100000).toFixed(1) + 'L'
+                : '₹' + n.toLocaleString('en-IN');
+
+            const fmtSrc = { live: '🟢 LIVE', cache: '🟡 CACHED', static_fallback: '🔴 STATIC' };
+            const srcBadge = fmtSrc[charger_source_type] || '🔴 STATIC';
+
+            const rows = [
+                {
+                    label: 'Daily anxiety', key: c => {
+                        const cl = scoreClass(c.daily_score);
+                        return `<span class="score-number ${cl}" style="font-size:22px">${c.daily_score}</span><span style="font-size:12px;color:var(--muted)">/10</span>`;
+                    }
+                },
+                {
+                    label: 'Long trip anxiety', key: c => {
+                        const cl = scoreClass(c.occasional_score);
+                        return `<span class="score-number ${cl}" style="font-size:22px">${c.occasional_score}</span><span style="font-size:12px;color:var(--muted)">/10</span>`;
+                    }
+                },
+                { label: 'City range', key: c => `${c.real_range_city_km} km` },
+                { label: 'Highway range', key: c => `${c.real_range_highway_km} km` },
+                { label: 'Ex-showroom', key: c => fmt(c.ex_showroom_inr) },
+                { label: 'Running cost', key: c => `₹${c.running_cost_per_km_inr}/km` },
+                { label: 'DC fast charge', key: c => `${c.dc_fast_charge_kw} kW · ${c.full_charge_min_dc}min` },
+                { label: 'Best for', key: c => `<span class="best-for-pill">${c.best_for}</span>` },
+            ];
+
+            const bestIdx = 0; // already sorted by backend
+            const headerCols = cars.map((c, i) =>
+                `<th${i === bestIdx ? ' style="color:var(--green)"' : ''}>${c.car.replace(' Electric', ' ⚡')}</th>`
+            ).join('');
+
+            const bodyRows = rows.map(row => `
+                <tr${row.label === 'Best for' ? ' class="best-row"' : ''}>
+                    <td>${row.label}</td>
+                    ${cars.map(c => `<td>${row.key(c)}</td>`).join('')}
+                </tr>`).join('');
+
+            document.getElementById('compareResults').innerHTML = `
+                <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:1px">
+                    ${city} · ${daily_km}km daily · ${occasional_km}km occasional · ${total_city_stations} stations · ${srcBadge}
+                </div>
+                <div class="compare-table-wrap">
+                    <table class="compare-table">
+                        <thead><tr><th>Metric</th>${headerCols}</tr></thead>
+                        <tbody>${bodyRows}</tbody>
+                    </table>
+                </div>
+                <div style="font-size:11px;color:var(--muted);margin-top:10px;font-family:'DM Mono',monospace;">
+                    🏆 Lowest combined anxiety score wins. Ranked: ${cars.map(c => c.car.split(' ').slice(-2).join(' ')).join(' → ')}
+                </div>`;
+            document.getElementById('compareResults').style.display = 'block';
+            document.getElementById('compareResults').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ── Route planner ──
+        function appendRouteLog(msg, type) {
+            const log = document.getElementById('routeLog');
+            const icons = { PLANNING: '🗺️', CALCULATING: '📍', SCRAPING_STOP: '⚡', STOP_FOUND: '✅', BUILDING_PLAN: '🔧', ERROR: '❌' };
+            const icon = icons[type] || '·';
+            const line = document.createElement('div');
+            const truncated = msg.length > 90 ? msg.slice(0, 90) + '…' : msg;
+            line.textContent = `${icon} ${truncated}`;
+            if (type === 'ERROR') line.style.color = 'var(--red)';
+            if (type === 'STOP_FOUND') line.style.color = 'var(--green)';
+            if (type === 'PLANNING') line.style.color = 'var(--amber)';
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        async function submitRoute() {
+            const from_city = document.getElementById('routeFrom').value;
+            const to_city = document.getElementById('routeTo').value;
+            const car_model = document.getElementById('routeCar').value;
+
+            if (from_city === to_city) {
+                document.getElementById('routeError').textContent = '⚠️ From and To cities must be different.';
+                document.getElementById('routeError').style.display = 'block';
+                return;
+            }
+            document.getElementById('routeError').style.display = 'none';
+            document.getElementById('routeResults').style.display = 'none';
+
+            const log = document.getElementById('routeLog');
+            const logHdr = document.getElementById('routeLogHeader');
+            const btn = document.getElementById('routeBtn');
+            log.innerHTML = '';
+            log.style.display = 'block';
+            logHdr.style.display = 'flex';
+            btn.disabled = true;
+            btn.textContent = 'Planning your trip…';
+
+            try {
+                const resp = await fetch('http://localhost:8080/route/stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ from_city, to_city, car_model, start_charge_pct: 1.0 }),
+                });
+                if (!resp.ok) throw new Error(`Backend returned ${resp.status}`);
+
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, { stream: true });
+                    const lines = buf.split('\n');
+                    buf = lines.pop();
+
+                    for (const line of lines) {
+                        if (!line.startsWith('data: ')) continue;
+                        let event;
+                        try { event = JSON.parse(line.slice(6)); } catch { continue; }
+
+                        const { type, message, data } = event;
+
+                        if (type === 'COMPLETE') {
+                            appendRouteLog('Route plan ready ✓', 'STOP_FOUND');
+                            setTimeout(() => {
+                                log.style.display = 'none';
+                                logHdr.style.display = 'none';
+                                renderRoute(data);
+                            }, 400);
+                            return;
+                        } else if (type === 'ERROR') {
+                            throw new Error(message || 'Route planning failed');
+                        } else if (message) {
+                            appendRouteLog(message, type);
+                        }
+                    }
+                }
+
+            } catch (err) {
+                document.getElementById('routeError').textContent = `⚠️ ${err.message}`;
+                document.getElementById('routeError').style.display = 'block';
+                log.style.display = 'none';
+                logHdr.style.display = 'none';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Plan My Trip →';
+            }
+        }
+
+        function renderRoute(data) {
+            const { from_city, to_city, distance_km, highway, car,
+                real_range_highway_km, stops, total_stops,
+                total_charge_time_min, est_driving_time_hr, est_total_time_hr,
+                trip_feasible, risk_level } = data;
+
+            const riskMap = {
+                comfortable: { cls: 'comfortable', text: '✅ Comfortable trip — well within range' },
+                manageable: { cls: 'manageable', text: '⚠️  Manageable — plan your stops' },
+                challenging: { cls: 'challenging', text: '🔴 Challenging — range is tight' },
+            };
+            const risk = riskMap[risk_level] || riskMap.manageable;
+
+            // ── Timeline ──
+            let timeline = `<div class="route-timeline">
+                <div class="rt-city">${from_city}</div>
+                <div class="rt-line"></div>`;
+            stops.forEach(s => {
+                timeline += `
+                <div class="rt-stop">
+                    <div class="rt-stop-dot">⚡</div>
+                    <div class="rt-stop-label">${s.waypoint}<br><span>km ${s.km} · ${s.charge_time_min}min</span></div>
+                </div>
+                <div class="rt-line"></div>`;
+            });
+            if (stops.length === 0) {
+                timeline += `<div class="rt-stop">
+                    <div class="rt-stop-dot" style="font-size:11px;border-color:var(--green);background:rgba(76,175,125,0.1)">✓</div>
+                    <div class="rt-stop-label" style="color:var(--green)">No stop<br><span>needed</span></div>
+                </div><div class="rt-line"></div>`;
+            }
+            timeline += `<div class="rt-city rt-end">${to_city}</div></div>`;
+
+            // ── Stop detail cards ──
+            const stopCards = stops.map((s, i) => {
+                const srcBadge = s.source_type === 'live' ? '<span class="freshness-badge live">🟢 LIVE</span>' :
+                    s.source_type === 'cache' ? '<span class="freshness-badge cache">🟡 CACHED</span>' :
+                        '<span class="freshness-badge static">🔴 STATIC</span>';
+                return `<div class="stop-card" style="animation-delay:${i * 0.08}s">
+                    <div class="stop-card-header">
+                        <span class="stop-number">Stop ${i + 1} of ${total_stops}  ·  ${s.waypoint} (km ${s.km})</span>
+                        <span class="stop-charge-badge">~${s.charge_time_min} min</span>
+                    </div>
+                    <div class="stop-details">
+                        ${srcBadge}
+                        ${s.total_stations > 0
+                        ? `<strong>${s.network}</strong> · ${s.total_stations} station${s.total_stations > 1 ? 's' : ''}
+                               · <strong>${s.dc_stations} DC</strong> · ${s.best_power_kw}kW max
+                               ${s.address ? `<br><span style="font-size:11px">${s.address}</span>` : ''}`
+                        : `<span style="color:var(--red)">No chargers found via live scrape — verify manually</span>`}
+                    </div>
+                </div>`;
+            }).join('');
+
+            const noStopCard = stops.length === 0
+                ? `<div class="stop-card" style="border-color:rgba(76,175,125,0.3)">
+                    <div style="font-size:13px;color:var(--green)">
+                        ✅ <strong>${car}</strong> can complete ${from_city} → ${to_city} (${distance_km}km) on a single charge.<br>
+                        Real highway range: ${real_range_highway_km}km · You'll arrive with comfortable buffer.
+                    </div>
+                  </div>` : '';
+
+            // ── Trip summary ──
+            const summary = `<div class="trip-summary-grid">
+                <div class="ts-cell"><div class="ts-label">Distance</div><div class="ts-value">${distance_km}<span class="ts-unit"> km</span></div></div>
+                <div class="ts-cell"><div class="ts-label">Charge stops</div><div class="ts-value">${total_stops}<span class="ts-unit"> stop${total_stops !== 1 ? 's' : ''}</span></div></div>
+                <div class="ts-cell"><div class="ts-label">Charge time</div><div class="ts-value">${total_charge_time_min}<span class="ts-unit"> min</span></div></div>
+                <div class="ts-cell"><div class="ts-label">Driving time</div><div class="ts-value">${est_driving_time_hr}<span class="ts-unit"> hr</span></div></div>
+                <div class="ts-cell"><div class="ts-label">Total journey</div><div class="ts-value">${est_total_time_hr}<span class="ts-unit"> hr</span></div></div>
+                <div class="ts-cell"><div class="ts-label">Highway</div><div class="ts-value" style="font-size:16px">${highway}</div></div>
+            </div>`;
+
+            document.getElementById('routeResults').innerHTML = `
+                <div style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:16px">
+                    ${from_city} → ${to_city}
+                    <span style="font-size:13px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-left:8px">${car}</span>
+                </div>
+                <div class="feasibility-badge ${risk.cls}">${risk.text}</div>
+                ${timeline}
+                ${noStopCard}
+                ${stopCards}
+                ${summary}
+                <button class="btn-reset" onclick="document.getElementById('routeResults').style.display='none'" style="margin-top:16px">← Plan another trip</button>
+            `;
+            document.getElementById('routeResults').style.display = 'block';
+            document.getElementById('routeResults').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Init on load
+        initCityBadges();
+        loadProfile();
+        initCarPicker();
+    </script>
+</body>
+
+</html>
