@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EV Mitra — India's Honest EV Advisor</title>
+    <title>EV Mitra — Honest EV Operations Agent</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link
         href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap"
@@ -1346,8 +1346,8 @@
                 <div class="logo-mark">E</div>
                 <span class="logo-text">EV<span>Mitra</span></span>
             </div>
-            <h1>India's <em>honest</em><br>EV advisor.</h1>
-            <p class="subtitle">Real owner data. Live charger checks. No manufacturer spin.</p>
+            <h1>Your <em>operator-grade</em><br>EV web agent.</h1>
+            <p class="subtitle">Live charger discovery. Stop validation. Fallback planning. Action reports.</p>
         </header>
 
         <!-- Welcome back banner -->
@@ -1368,6 +1368,17 @@
                     <span class="section-label">01 — Your City & Car</span>
                     <div class="field-row">
                         <div class="field">
+                            <label>Country</label>
+                            <select id="country" onchange="onCountryChange()">
+                                <option value="India">India</option>
+                                <option value="UAE">UAE</option>
+                                <option value="UK">UK</option>
+                                <option value="USA">USA</option>
+                                <option value="Germany">Germany</option>
+                                <option value="Other">Other (any country)</option>
+                            </select>
+                        </div>
+                        <div class="field">
                             <label>City <span id="cityLiveBadge"
                                     style="display:none;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;background:rgba(76,175,125,0.12);color:var(--green);border:1px solid rgba(76,175,125,0.3);border-radius:4px;padding:1px 6px;margin-left:4px;vertical-align:middle;">⚡
                                     LIVE</span></label>
@@ -1381,11 +1392,13 @@
                                 <option value="Chennai">Chennai</option>
                                 <option value="Ahmedabad">Ahmedabad</option>
                             </select>
+                            <input type="text" id="cityText" style="display:none" placeholder="Enter any city" oninput="updateCityBadge()">
                             <div id="cityStatus"
                                 style="font-size:10px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace;height:14px;">
                             </div>
                         </div>
-                        <div class="field">
+                    </div>
+                    <div class="field" style="margin-top:12px">
                             <label>EV Model</label>
                             <select id="carModel">
                                 <option value="Tata Nexon EV Max">Tata Nexon EV Max</option>
@@ -1399,7 +1412,6 @@
                                 <option value="BYD Atto 3">BYD Atto 3</option>
                                 <option value="Mahindra BE 6">Mahindra BE 6</option>
                             </select>
-                        </div>
                     </div>
                 </div>
 
@@ -1464,6 +1476,7 @@
                                     <option value="Chennai">Chennai</option>
                                     <option value="Ahmedabad">Ahmedabad</option>
                                 </select>
+                                <input type="text" id="compareCityText" style="display:none" placeholder="Enter any city">
                             </div>
                             <div class="field">
                                 <label>Home charging</label>
@@ -1523,6 +1536,7 @@
                                     <option value="Chennai">Chennai</option>
                                     <option value="Ahmedabad">Ahmedabad</option>
                                 </select>
+                                <input type="text" id="routeFromText" style="display:none" placeholder="Enter origin city">
                             </div>
                             <div class="field">
                                 <label>To</label>
@@ -1539,6 +1553,7 @@
                                     <option value="Chennai">Chennai</option>
                                     <option value="Ahmedabad">Ahmedabad</option>
                                 </select>
+                                <input type="text" id="routeToText" style="display:none" placeholder="Enter destination city">
                             </div>
                         </div>
                         <div class="field">
@@ -1599,6 +1614,7 @@
                                 <option value="Chennai">Chennai</option>
                                 <option value="Ahmedabad">Ahmedabad</option>
                             </select>
+                            <input type="text" id="intelCityText" style="display:none" placeholder="Enter any city">
                         </div>
                         <div id="intelError" class="error-card"></div>
                         <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:10px;display:none;align-items:center;gap:8px;"
@@ -1721,8 +1737,8 @@
         <footer>
             <div class="footer-inner">
                 <div class="footer-left">
-                    Data from Statiq, Team-BHP, India EV Policy.<br>
-                    Verify subsidies and charger status before purchase.
+                    Data from live provider pages and owner forums.<br>
+                    Verify incentives and charger status before operations.
                 </div>
                 <div class="tinyfish-badge">
                     <div class="tf-dot"></div>
@@ -1736,17 +1752,34 @@
     <script>
         // ── Car registry (mirrors car_profiles.py) ──
         const CAR_REGISTRY = [
-            { model: 'Tata Nexon EV Max', segment: 'compact SUV' },
-            { model: 'Tata Nexon EV', segment: 'compact SUV' },
-            { model: 'Tata Tiago EV', segment: 'hatchback' },
-            { model: 'MG Windsor EV', segment: 'crossover' },
-            { model: 'MG ZS EV', segment: 'mid-size SUV' },
-            { model: 'Hyundai Creta Electric', segment: 'compact SUV' },
-            { model: 'Hyundai Ioniq 5', segment: 'premium crossover' },
-            { model: 'Kia EV6', segment: 'premium crossover' },
-            { model: 'BYD Atto 3', segment: 'mid-size SUV' },
-            { model: 'Mahindra BE 6', segment: 'electric SUV' },
+            { model: 'Tata Nexon EV Max',      segment: 'compact SUV',       markets: ['india'] },
+            { model: 'Tata Nexon EV',           segment: 'compact SUV',       markets: ['india'] },
+            { model: 'Tata Tiago EV',           segment: 'hatchback',         markets: ['india'] },
+            { model: 'MG Windsor EV',           segment: 'crossover',         markets: ['india'] },
+            { model: 'MG ZS EV',                segment: 'mid-size SUV',      markets: ['global'] },
+            { model: 'Hyundai Creta Electric',  segment: 'compact SUV',       markets: ['india'] },
+            { model: 'Hyundai Ioniq 5',         segment: 'premium crossover', markets: ['global'] },
+            { model: 'Kia EV6',                 segment: 'premium crossover', markets: ['global'] },
+            { model: 'BYD Atto 3',              segment: 'mid-size SUV',      markets: ['global'] },
+            { model: 'Mahindra BE 6',           segment: 'electric SUV',      markets: ['india'] },
         ];
+
+        function carsForCountry(country) {
+            if (!country || country === 'India') return CAR_REGISTRY;
+            return CAR_REGISTRY.filter(c => c.markets.includes('global'));
+        }
+
+        function rebuildCarSelects(country) {
+            const cars = carsForCountry(country);
+            const opts = cars.map(c => `<option value="${c.model}">${c.model}</option>`).join('');
+            ['carModel', 'routeCar'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                const prev = sel.value;
+                sel.innerHTML = opts;
+                if (cars.some(c => c.model === prev)) sel.value = prev;
+            });
+        }
 
         // ── User ID (persistent via localStorage) ──
         function getUserId() {
@@ -1796,6 +1829,92 @@
         let homeCharging = false;
         let compareCharging = false;
         let selectedCars = new Set();
+
+        const CITY_OPTIONS = {
+            India:   ['Nagpur', 'Pune', 'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Ahmedabad'],
+            UAE:     ['Dubai', 'Abu Dhabi', 'Sharjah'],
+            UK:      ['London', 'Manchester', 'Birmingham', 'Edinburgh', 'Bristol'],
+            USA:     ['New York', 'Los Angeles', 'Chicago', 'Houston', 'San Francisco'],
+            Germany: ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne'],
+            Other:   [],
+        };
+
+        // IDs of the city select + its paired free-text input
+        const CITY_FIELD_PAIRS = [
+            ['city',        'cityText'],
+            ['compareCity', 'compareCityText'],
+            ['intelCity',   'intelCityText'],
+            ['routeFrom',   'routeFromText'],
+            ['routeTo',     'routeToText'],
+        ];
+
+        /** Read a city field — uses text input when "Other" country is active. */
+        function getFieldValue(selectId) {
+            const txt = document.getElementById(selectId + 'Text');
+            if (txt && txt.style.display !== 'none') return txt.value.trim();
+            const sel = document.getElementById(selectId);
+            return sel ? sel.value : '';
+        }
+
+        function fillSelectOptions(selectId, values) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const current = sel.value;
+            sel.innerHTML = values.map(v => `<option value="${v}">${v}</option>`).join('');
+            if (values.includes(current)) sel.value = current;
+        }
+
+        function onCountryChange() {
+            const country = document.getElementById('country').value;
+            const isOther = country === 'Other';
+            const cities = CITY_OPTIONS[country] || CITY_OPTIONS.India;
+
+            // Rebuild car model dropdowns for the selected country
+            rebuildCarSelects(country);
+            selectedCars.clear();
+            initCarPicker(country);
+
+            CITY_FIELD_PAIRS.forEach(([selId, txtId]) => {
+                const sel = document.getElementById(selId);
+                const txt = document.getElementById(txtId);
+                if (!sel) return;
+                if (isOther) {
+                    sel.style.display = 'none';
+                    if (txt) txt.style.display = '';
+                } else {
+                    sel.style.display = '';
+                    if (txt) txt.style.display = 'none';
+                }
+            });
+
+            if (!isOther) {
+                fillSelectOptions('city', cities);
+                fillSelectOptions('compareCity', cities);
+                fillSelectOptions('intelCity', cities);
+                fillSelectOptions('routeFrom', cities);
+
+                if (country === 'UAE') {
+                    fillSelectOptions('routeTo', ['Abu Dhabi', 'Dubai', 'Sharjah']);
+                } else if (country === 'India') {
+                    document.getElementById('routeTo').innerHTML = `
+                        <option value="Goa">Goa</option>
+                        <option value="Pune">Pune</option>
+                        <option value="Mumbai">Mumbai</option>
+                        <option value="Nagpur">Nagpur</option>
+                        <option value="Delhi">Delhi</option>
+                        <option value="Agra">Agra</option>
+                        <option value="Jaipur">Jaipur</option>
+                        <option value="Bangalore">Bangalore</option>
+                        <option value="Hyderabad">Hyderabad</option>
+                        <option value="Chennai">Chennai</option>
+                        <option value="Ahmedabad">Ahmedabad</option>
+                    `;
+                } else {
+                    fillSelectOptions('routeTo', cities);
+                }
+            }
+            updateCityBadge();
+        }
 
         function toggleHomeCharging() {
             homeCharging = !homeCharging;
@@ -2080,10 +2199,11 @@
         }
 
         function updateCityBadge() {
-            const city = document.getElementById('city').value;
+            const country = (document.getElementById('country')?.value || 'India').toLowerCase();
+            const city = getFieldValue('city');
             const badge = document.getElementById('cityLiveBadge');
             const status = document.getElementById('cityStatus');
-            const entry = cityCache[city];
+            const entry = cityCache[`${country}:${city}`] || cityCache[city];
             if (entry && entry.cached) {
                 badge.style.display = 'inline';
                 if (entry.fresh) {
@@ -2138,7 +2258,8 @@
 
         // ── Submit — unified /verdict/stream (Fix 2) ──
         async function submitQuery() {
-            const city = document.getElementById('city').value;
+            const city = getFieldValue('city');
+            const country = document.getElementById('country').value;
             const daily_km = parseInt(document.getElementById('dailyKm').value);
             const occasional_km = parseInt(document.getElementById('occasionalKm').value);
             const car_model = document.getElementById('carModel').value;
@@ -2166,6 +2287,7 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
+                        country,
                         city, daily_km, occasional_km, car_model,
                         has_home_charging: homeCharging,
                         user_description: '',
@@ -2282,7 +2404,8 @@
 
         // ── Intelligence report ──
         async function submitIntel() {
-            const city = document.getElementById('intelCity').value;
+            const city = getFieldValue('intelCity');
+            const country = document.getElementById('country').value;
             const btn = document.getElementById('intelBtn');
             const logEl = document.getElementById('intelLog');
             const logHeader = document.getElementById('intelLogHeader');
@@ -2301,7 +2424,7 @@
                 const resp = await fetch('http://localhost:8080/intelligence-report', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ city, report_type: 'charger_gap_analysis' }),
+                    body: JSON.stringify({ country, city, report_type: 'charger_gap_analysis' }),
                 });
                 if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
@@ -2401,9 +2524,11 @@
         }
 
         // ── Compare car picker ──
-        function initCarPicker() {
+        function initCarPicker(country) {
+            country = country || document.getElementById('country').value;
+            const cars = carsForCountry(country);
             const picker = document.getElementById('carPicker');
-            picker.innerHTML = CAR_REGISTRY.map(({ model, segment }) => `
+            picker.innerHTML = cars.map(({ model, segment }) => `
                 <div class="car-pick-item" id="pick-${model.replace(/\s/g, '_')}" onclick="toggleCarPick(this,'${model}')">
                     <input type="checkbox" id="chk-${model.replace(/\s/g, '_')}" onclick="event.stopPropagation()">
                     <span>${model}</span>
@@ -2438,6 +2563,7 @@
             }
             document.getElementById('compareError').style.display = 'none';
             const btn = document.getElementById('compareBtn');
+            const country = document.getElementById('country').value;
             btn.disabled = true;
             btn.textContent = 'Comparing…';
 
@@ -2446,7 +2572,8 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        city: document.getElementById('compareCity').value,
+                        country,
+                        city: getFieldValue('compareCity'),
                         daily_km: parseInt(document.getElementById('compareDailyKm').value),
                         occasional_km: parseInt(document.getElementById('compareOccKm').value),
                         has_home_charging: compareCharging,
@@ -2541,9 +2668,10 @@
         }
 
         async function submitRoute() {
-            const from_city = document.getElementById('routeFrom').value;
-            const to_city = document.getElementById('routeTo').value;
+            const from_city = getFieldValue('routeFrom');
+            const to_city = getFieldValue('routeTo');
             const car_model = document.getElementById('routeCar').value;
+            const country = document.getElementById('country').value;
 
             if (from_city === to_city) {
                 document.getElementById('routeError').textContent = '⚠️ From and To cities must be different.';
@@ -2566,7 +2694,7 @@
                 const resp = await fetch('http://localhost:8080/route/stream', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ from_city, to_city, car_model, start_charge_pct: 1.0 }),
+                    body: JSON.stringify({ country, from_city, to_city, car_model, start_charge_pct: 1.0 }),
                 });
                 if (!resp.ok) throw new Error(`Backend returned ${resp.status}`);
 
@@ -2619,7 +2747,7 @@
             const { from_city, to_city, distance_km, highway, car,
                 real_range_highway_km, stops, total_stops,
                 total_charge_time_min, est_driving_time_hr, est_total_time_hr,
-                trip_feasible, risk_level } = data;
+                trip_feasible, risk_level, operator_action_report } = data;
 
             const riskMap = {
                 comfortable: { cls: 'comfortable', text: '✅ Comfortable trip — well within range' },
@@ -2677,6 +2805,31 @@
                     </div>
                   </div>` : '';
 
+            // ── Operator action report card ──
+            let operatorCard = '';
+            if (operator_action_report) {
+                const oar = operator_action_report;
+                const weakCount = oar.weak_stops_detected || 0;
+                const actions = oar.actions || [];
+                const headerColor = weakCount > 0 ? '#f59e0b' : '#4caf7d';
+                const headerIcon = weakCount > 0 ? '⚠️' : '✅';
+                const workflowSteps = (oar.workflow_completed || [])
+                    .map(s => `<span style="display:inline-block;background:rgba(255,255,255,0.06);border-radius:4px;padding:2px 7px;font-size:11px;margin:2px">${s.replace(/_/g, ' ')}</span>`)
+                    .join(' ');
+                const actionItems = actions.map(a =>
+                    `<li style="margin-bottom:6px;font-size:13px;color:var(--text)">${a}</li>`
+                ).join('');
+                operatorCard = `
+                <div class="stop-card" style="border-color:${headerColor};border-left:3px solid ${headerColor};margin-top:16px">
+                    <div class="stop-card-header" style="color:${headerColor}">
+                        <span>${headerIcon} Operator Action Report</span>
+                        <span style="font-size:11px;color:var(--muted)">${weakCount} weak stop${weakCount !== 1 ? 's' : ''} detected</span>
+                    </div>
+                    <div style="margin-bottom:10px;font-size:12px;color:var(--muted)">Workflow: ${workflowSteps}</div>
+                    <ul style="margin:0;padding-left:18px">${actionItems}</ul>
+                </div>`;
+            }
+
             // ── Trip summary ──
             const summary = `<div class="trip-summary-grid">
                 <div class="ts-cell"><div class="ts-label">Distance</div><div class="ts-value">${distance_km}<span class="ts-unit"> km</span></div></div>
@@ -2697,6 +2850,7 @@
                 ${noStopCard}
                 ${stopCards}
                 ${summary}
+                ${operatorCard}
                 <button class="btn-reset" onclick="document.getElementById('routeResults').style.display='none'" style="margin-top:16px">← Plan another trip</button>
             `;
             document.getElementById('routeResults').style.display = 'block';
@@ -2704,6 +2858,7 @@
         }
 
         // Init on load
+        onCountryChange();
         initCityBadges();
         loadProfile();
         initCarPicker();

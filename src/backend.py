@@ -12,6 +12,7 @@ API runs at http://localhost:8080
 import json
 import math
 import os
+import asyncio
 import queue as queue_module
 import threading
 import time
@@ -24,12 +25,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-# Load .env — check same directory first, then parent
+# Load .env — check src dir first, then project root (works for both
+# `python backend.py` from src/ and `uvicorn src.backend:app` from project root)
 try:
     from dotenv import load_dotenv
-    _here = Path(__file__).parent
-    load_dotenv(_here / ".env")           # ev_mitra/.env  (checked first)
-    load_dotenv(_here.parent / ".env")    # IoEV/.env      (fills any missing keys)
+    _here = Path(__file__).resolve().parent          # always absolute: .../src
+    load_dotenv(_here / ".env", override=False)      # src/.env (if it exists)
+    load_dotenv(_here.parent / ".env", override=False)  # project-root/.env
 except ImportError:
     pass  # python-dotenv not installed, rely on OS env vars
 
@@ -44,7 +46,7 @@ from synthesis import (
 )
 
 # ── Import car profiles and user store ──
-from car_profiles import CAR_PROFILES, CAR_MODEL_LIST, get_profile as get_car_profile
+from car_profiles import CAR_PROFILES, CAR_MODEL_LIST, get_profile as get_car_profile, get_models_for_country
 import user_store
 
 app = FastAPI(title="EV Mitra API", version="3.0")
@@ -65,6 +67,10 @@ if TINYFISH_API_KEY:
 else:
     print("⚠️  TINYFISH_API_KEY not set — live scraping will fail")
 TINYFISH_BASE_URL = "https://agent.tinyfish.ai/v1/automation/run-sse"
+# Circuit breaker: set to True after the first unrecoverable TinyFish error
+# (e.g. 0 credits, invalid key) so subsequent calls skip immediately.
+_TINYFISH_DISABLED = False
+_TINYFISH_DISABLE_REASON = ""
 
 # Pre-load static owner/subsidy data once at startup
 print("📂 Loading owner insight data files...")
@@ -79,22 +85,148 @@ print("🗄️  User store ready\n")
 CHARGER_CACHE: dict[str, dict] = {}   # city → {data, timestamp}
 TEAMBHP_CACHE: dict[str, dict] = {}   # car_model → {data, timestamp}
 CACHE_TTL_SECONDS = 3600              # 1 hour
+_REFRESH_LOCK = threading.Lock()
+_REFRESH_IN_FLIGHT: set[str] = set()
 
-# ── City → State mapping (for URLs and subsidy context) ──
-CITY_STATE: dict[str, str] = {
-    "Nagpur":     "maharashtra",
-    "Pune":       "maharashtra",
-    "Mumbai":     "maharashtra",
-    "Delhi":      "delhi",
-    "Bangalore":  "karnataka",
-    "Hyderabad":  "telangana",
-    "Chennai":    "tamil-nadu",
-    "Ahmedabad":  "gujarat",
-}
-
-# State-specific subsidy data — add more states as data is gathered
-STATE_SUBSIDIES: dict[str, dict] = {
-    "maharashtra": MAHARASHTRA_SUBSIDY,
+# ── Country configuration — single source of truth for all regions ──
+# Each entry has: providers, currency, city_region_map, default_cities, incentives.
+# "_global" is the fallback for any unrecognised country.
+COUNTRY_CONFIG: dict[str, dict] = {
+    "india": {
+        "currency": "INR",
+        "city_region_map": {
+            "Nagpur":     "maharashtra",
+            "Pune":       "maharashtra",
+            "Mumbai":     "maharashtra",
+            "Delhi":      "delhi",
+            "Bangalore":  "karnataka",
+            "Hyderabad":  "telangana",
+            "Chennai":    "tamil-nadu",
+            "Ahmedabad":  "gujarat",
+        },
+        "default_cities": ["Nagpur", "Pune", "Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Ahmedabad"],
+        "providers": [
+            {"name": "ChargeZone",  "url": "https://chargezone.in/charging-stations/{state}/{city}",           "profile": "lite"},
+            {"name": "EVSE India",  "url": "https://evseindia.org/charging-station/{city}",                    "profile": "lite"},
+            {"name": "Statiq",      "url": "https://www.statiq.in/charging-stations/{city_lower}",             "profile": "stealth"},
+        ],
+        "incentives": {
+            "maharashtra": MAHARASHTRA_SUBSIDY,
+            "default": {
+                "state_name": "India",
+                "fame2_status": "FAME II ended March 2024. FAME III under discussion.",
+                "total_estimated_saving_inr": 0,
+                "note": "Verify current EV incentives with a local dealer. Most states offer road tax and registration benefits.",
+                "source": "State EV policy (verify locally)",
+            },
+        },
+    },
+    "uae": {
+        "currency": "AED",
+        "city_region_map": {
+            "Dubai":     "dubai",
+            "Abu Dhabi": "abu-dhabi",
+            "Sharjah":   "sharjah",
+        },
+        "default_cities": ["Dubai", "Abu Dhabi", "Sharjah"],
+        "providers": [
+            {"name": "PlugShare UAE",   "url": "https://www.plugshare.com/search?query={city}+UAE+EV+charging",        "profile": "stealth"},
+            {"name": "Google Maps UAE", "url": "https://www.google.com/maps/search/EV+charging+stations+in+{city}+UAE","profile": "lite"},
+            {"name": "UAEV Portal",     "url": "https://uaev.ae/search?city={city}",                                   "profile": "lite"},
+        ],
+        "incentives": {
+            "dubai": {
+                "state_name": "Dubai",
+                "fame2_status": "No FAME equivalent. Incentives are utility/tariff and parking-policy dependent.",
+                "total_estimated_saving_inr": 0,
+                "note": "Incentives vary by authority (DEWA/RTA/free-zone). Verify latest EV charging and parking policies.",
+                "source": "Dubai EV Green Charger / RTA policy pages",
+            },
+            "default": {
+                "state_name": "UAE",
+                "fame2_status": "No national purchase subsidy baseline for all emirates.",
+                "total_estimated_saving_inr": 0,
+                "note": "Verify EV incentives with local authority and utility provider.",
+                "source": "UAE local authority policy pages",
+            },
+        },
+    },
+    "uk": {
+        "currency": "GBP",
+        "city_region_map": {},
+        "default_cities": ["London", "Manchester", "Birmingham", "Edinburgh", "Bristol"],
+        "providers": [
+            {"name": "PlugShare UK",    "url": "https://www.plugshare.com/search?query={city}+UK+EV+charging",         "profile": "stealth"},
+            {"name": "Zap-Map",         "url": "https://www.zap-map.com/charge-points/map/?search={city}",             "profile": "lite"},
+            {"name": "Pod Point",       "url": "https://pod-point.com/charging-near-me/{city_lower}",                  "profile": "lite"},
+        ],
+        "incentives": {
+            "default": {
+                "state_name": "United Kingdom",
+                "fame2_status": "UK Plug-in Car Grant ended June 2022. OZEV home charger grant (EVHS) still active.",
+                "total_estimated_saving_inr": 0,
+                "note": "Check current OZEV grants and local council EV incentives.",
+                "source": "UK OZEV (Office for Zero Emission Vehicles)",
+            },
+        },
+    },
+    "usa": {
+        "currency": "USD",
+        "city_region_map": {},
+        "default_cities": ["New York", "Los Angeles", "Chicago", "Houston", "San Francisco"],
+        "providers": [
+            {"name": "PlugShare USA",   "url": "https://www.plugshare.com/search?query={city}+EV+charging",            "profile": "stealth"},
+            {"name": "ChargePoint",     "url": "https://www.chargepoint.com/find-charging/search/?query={city}",       "profile": "lite"},
+            {"name": "EVgo",            "url": "https://www.evgo.com/find-a-charger/?zipcode={city}",                  "profile": "lite"},
+        ],
+        "incentives": {
+            "default": {
+                "state_name": "United States",
+                "fame2_status": "Federal EV Tax Credit up to $7,500 (IRA 2022) — income and MSRP caps apply.",
+                "total_estimated_saving_inr": 0,
+                "note": "Verify eligibility at IRS.gov. Many states add additional incentives.",
+                "source": "IRS Clean Vehicle Credit / US DOE AFDC",
+            },
+        },
+    },
+    "germany": {
+        "currency": "EUR",
+        "city_region_map": {},
+        "default_cities": ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne"],
+        "providers": [
+            {"name": "PlugShare DE",    "url": "https://www.plugshare.com/search?query={city}+Germany+EV+charging",    "profile": "stealth"},
+            {"name": "IONITY",          "url": "https://ionity.eu/en/find-hpc.html?search={city}",                     "profile": "lite"},
+            {"name": "EnBW mobility+",  "url": "https://www.enbw.com/elektromobilitaet/laden/ladesaeulenkarte/?city={city}", "profile": "lite"},
+        ],
+        "incentives": {
+            "default": {
+                "state_name": "Germany",
+                "fame2_status": "German EV subsidy (Umweltbonus) ended Dec 2023 for private buyers.",
+                "total_estimated_saving_inr": 0,
+                "note": "Check current BAFA commercial fleet grants. State-level incentives vary.",
+                "source": "German BAFA / Bundesregierung EV policy",
+            },
+        },
+    },
+    "_global": {
+        "currency": "USD",
+        "city_region_map": {},
+        "default_cities": [],
+        "providers": [
+            {"name": "PlugShare",       "url": "https://www.plugshare.com/search?query={city}+EV+charging",            "profile": "stealth"},
+            {"name": "OpenChargeMap",   "url": "https://openchargemap.org/site/poi/search?country=&query={city}",      "profile": "lite"},
+            {"name": "Google Maps EV",  "url": "https://www.google.com/maps/search/EV+charging+stations+near+{city}", "profile": "lite"},
+        ],
+        "incentives": {
+            "default": {
+                "state_name": "Unknown",
+                "fame2_status": "No default policy configured for this country.",
+                "total_estimated_saving_inr": 0,
+                "note": "Verify local EV incentives with your dealer and city authority.",
+                "source": "Local policy portal",
+            },
+        },
+    },
 }
 
 # ── Indian highway routes — (from, to): distance + waypoints ──
@@ -206,6 +338,19 @@ HIGHWAY_ROUTES: dict[tuple, dict] = {
             {"name": "Kolar",     "km": 500, "state": "karnataka"},
         ],
     },
+    ("Dubai", "Abu Dhabi"): {
+        "distance_km": 140, "highway": "E11",
+        "waypoints": [
+            {"name": "Jebel Ali", "km": 40, "state": "dubai"},
+            {"name": "Yas Island", "km": 115, "state": "abu-dhabi"},
+        ],
+    },
+    ("Dubai", "Sharjah"): {
+        "distance_km": 35, "highway": "E11",
+        "waypoints": [
+            {"name": "Al Qusais", "km": 20, "state": "dubai"},
+        ],
+    },
 }
 
 
@@ -286,34 +431,37 @@ def estimate_charge_time_min(car_profile: dict, station_power_kw: int) -> int:
     return math.ceil(ref * car_kw / actual)
 
 
-def get_subsidy_for_city(city: str) -> dict:
-    """Return the subsidy dict for the city's state, or a generic fallback."""
-    state = CITY_STATE.get(city, "").lower()
-    if state in STATE_SUBSIDIES:
-        return STATE_SUBSIDIES[state]
-    # Generic fallback for states without specific data
-    state_display = city  # use city as proxy until we have proper state data
-    # Try to get a nicer state name
-    state_names = {
-        "delhi": "Delhi", "karnataka": "Karnataka", "telangana": "Telangana",
-        "tamil-nadu": "Tamil Nadu", "gujarat": "Gujarat",
+def _normalize_country(country: str) -> str:
+    c = (country or "india").strip().lower()
+    aliases = {
+        "in": "india", "india": "india",
+        "ae": "uae", "uae": "uae", "united arab emirates": "uae",
+        "gb": "uk", "uk": "uk", "united kingdom": "uk", "england": "uk", "britain": "uk",
+        "us": "usa", "usa": "usa", "united states": "usa", "united states of america": "usa",
+        "de": "germany", "germany": "germany", "deutschland": "germany",
     }
-    state_display = state_names.get(state, city)
-    return {
-        "state_name": state_display,
-        "fame2_status": "FAME II ended March 2024. FAME III under discussion.",
-        "total_estimated_saving_inr": 0,
-        "note": f"Verify current EV incentives with a local dealer in {state_display}. "
-                "Most states offer road tax and registration exemptions.",
-        "source": f"{state_display} EV Policy (verify locally)",
-    }
+    return aliases.get(c, c)
 
 
-# ─────────────────────────────────────────────────────────
+def _market_region_for_city(city: str, country: str) -> str:
+    cfg = COUNTRY_CONFIG.get(country) or COUNTRY_CONFIG["_global"]
+    return cfg["city_region_map"].get(city, "default").lower()
+
+
+def get_incentives_for_locale(city: str, country: str) -> dict:
+    """Return locale incentives based on country + region."""
+    c = _normalize_country(country)
+    region = _market_region_for_city(city, c)
+    cfg = COUNTRY_CONFIG.get(c) or COUNTRY_CONFIG["_global"]
+    incentives = cfg["incentives"]
+    return incentives.get(region) or incentives.get("default") or COUNTRY_CONFIG["_global"]["incentives"]["default"]
+
+
 # MODELS
 # ─────────────────────────────────────────────────────────
 
 class QueryRequest(BaseModel):
+    country: str = "India"
     city: str = "Nagpur"
     daily_km: int = 25
     occasional_km: int = 230
@@ -333,6 +481,7 @@ class ProfileRequest(BaseModel):
 
 
 class CompareRequest(BaseModel):
+    country: str = "India"
     city: str = "Nagpur"
     daily_km: int = 25
     occasional_km: int = 230
@@ -341,6 +490,7 @@ class CompareRequest(BaseModel):
 
 
 class RouteRequest(BaseModel):
+    country: str = "India"
     from_city: str = "Mumbai"
     to_city: str = "Goa"
     car_model: str = "Tata Nexon EV Max"
@@ -348,6 +498,7 @@ class RouteRequest(BaseModel):
 
 
 class IntelligenceRequest(BaseModel):
+    country: str = "India"
     city: str = "Bangalore"
     report_type: str = "charger_gap_analysis"
 
@@ -400,6 +551,9 @@ If no stations found for {city}, return total_found: 0 and empty stations array.
     }
 
     def generate():
+        if _TINYFISH_DISABLED:
+            yield f"data: {json.dumps({'type': 'ERROR', 'message': f'TinyFish unavailable: {_TINYFISH_DISABLE_REASON}'})}\n\n"
+            return
         yield f"data: {json.dumps({'type': 'STATUS', 'message': f'Connecting to TinyFish for {city}...'})}\n\n"
 
         try:
@@ -415,7 +569,11 @@ If no stations found for {city}, return total_found: 0 and empty stations array.
                 timeout=180,
             ) as resp:
                 if resp.status_code != 200:
-                    yield f"data: {json.dumps({'type': 'ERROR', 'message': f'TinyFish returned HTTP {resp.status_code}'})}\n\n"
+                    try:
+                        err_msg = (resp.json().get("error") or {}).get("message") or f"HTTP {resp.status_code}"
+                    except Exception:
+                        err_msg = f"HTTP {resp.status_code}"
+                    yield f"data: {json.dumps({'type': 'ERROR', 'message': f'TinyFish error: {err_msg}'})}\n\n"
                     return
 
                 for raw_line in resp.iter_lines():
@@ -474,23 +632,47 @@ def stream_verdict(query: QueryRequest):
     Events: SCRAPING_CHARGERS, SCRAPING_TEAMBHP, SCORING, LLM, COMPLETE, ERROR.
     Both TinyFish calls run in parallel threads.
     """
-    city = query.city.strip().capitalize()
+    city = _normalize_city(query.city)
+    country = _normalize_country(query.country)
     car_model = query.car_model
     car_profile = get_car_profile(car_model)
     user_id = query.user_id.strip() or None
 
     def generate():
         q = queue_module.Queue()
-        charger_holder = [None]
-        teambhp_holder = [None]
+        charger_holder: list[dict] = [{}]
+        teambhp_holder: list[dict] = [{}]
 
         def do_chargers():
             q.put({"type": "SCRAPING_CHARGERS",
-                   "message": f"🌐 Checking live stations in {city}..."})
+                   "message": f"🌐 Checking live stations in {city}, {country.title()}..."})
             try:
-                data = fetch_live_chargers(city)
+                started_at = time.time()
+                data = fetch_live_chargers(city, country=country, quick_mode=True, hard_deadline_sec=3)
                 charger_holder[0] = data
                 count = data.get("total_found", len(data.get("stations", [])))
+                if data.get("background_refresh_started"):
+                    q.put({
+                        "type": "PROGRESS",
+                        "message": "⏱️ Returned fast result in under 3s. Live refresh continues in background..."
+                    })
+
+                    def watch_refresh():
+                        key = _charger_cache_key(city, country)
+                        for _ in range(12):
+                            time.sleep(1)
+                            entry = CHARGER_CACHE.get(key)
+                            if entry and entry.get("timestamp", 0) > started_at:
+                                data_live = dict(entry["data"])
+                                charger_holder[0] = data_live
+                                q.put({
+                                    "type": "CHARGERS_REFRESHED",
+                                    "message": f"🔄 Live refresh complete: {data_live.get('total_found', 0)} stations from {data_live.get('provider', 'provider')}"
+                                })
+                                return
+
+                    threading.Thread(target=watch_refresh, daemon=True).start()
+
                 q.put({"type": "CHARGERS_DONE",
                        "message": f"⚡ Found {count} charging stations in {city}",
                        "_done": "chargers"})
@@ -501,10 +683,16 @@ def stream_verdict(query: QueryRequest):
                        "_done": "chargers"})
 
         def do_teambhp():
+            if country != "india":
+                teambhp_holder[0] = {}
+                q.put({"type": "TEAMBHP_DONE",
+                       "message": "Owner forum data: India-only (Team-BHP). Using global knowledge for this country.",
+                       "_done": "teambhp"})
+                return
             q.put({"type": "SCRAPING_TEAMBHP",
                    "message": "📖 Reading owner experiences on Team-BHP..."})
             try:
-                data = fetch_live_teambhp(car_model)
+                data = fetch_live_teambhp(car_model, quick_mode=True, hard_deadline_sec=3)
                 teambhp_holder[0] = data
                 q.put({"type": "TEAMBHP_DONE",
                        "message": "✅ Team-BHP owner insights loaded",
@@ -527,7 +715,7 @@ def stream_verdict(query: QueryRequest):
         pending = 2
         while pending > 0:
             try:
-                msg = q.get(timeout=400)
+                msg = q.get(timeout=30)
                 # Strip internal routing keys before sending to frontend
                 out = {k: v for k, v in msg.items() if not k.startswith("_")}
                 yield f"data: {json.dumps(out)}\n\n"
@@ -538,6 +726,15 @@ def stream_verdict(query: QueryRequest):
                 yield f"data: {json.dumps({'type': 'CHARGERS_DONE', 'message': '⚠️ Live scrape timed out — using cached data'})}\n\n"
                 break
 
+        # Drain any opportunistic background refresh event that arrived.
+        while True:
+            try:
+                msg = q.get_nowait()
+                out = {k: v for k, v in msg.items() if not k.startswith("_")}
+                yield f"data: {json.dumps(out)}\n\n"
+            except queue_module.Empty:
+                break
+
         t1.join(timeout=5)
         t2.join(timeout=5)
 
@@ -546,11 +743,7 @@ def stream_verdict(query: QueryRequest):
 
         charger_data = charger_holder[0] or {}
         if not charger_data.get("stations"):
-            # Fallback to static JSON — mark as static
-            charger_key = f"chargers_{city.lower()}"
-            charger_data = dict(ALL_DATA.get(charger_key, {"stations": [], "total_found": 0}))
-            charger_data.setdefault("source_type", "static_fallback")
-            charger_data.setdefault("fetched_at", None)
+            charger_data = _static_city_fallback(city, country)
 
         scores = calculate_anxiety_scores(
             charger_data,
@@ -561,37 +754,42 @@ def stream_verdict(query: QueryRequest):
         if query.has_home_charging:
             scores["daily_score"] = max(1, scores["daily_score"] - 1)
 
-        # Prefer live Team-BHP, fall back to static Nexon data
-        teambhp_live = bool(teambhp_holder[0] and teambhp_holder[0].get("honest_verdict"))
-        live_t1 = teambhp_holder[0] if teambhp_live else ALL_DATA.get("teambhp_thread1", {})
-
-        # thread2 / thread3 are static Nexon JSON files.
-        # When a non-Nexon car is selected, we reuse the live_t1 scrape to
-        # fill in supplementary fields (most_honest_quote, biggest_regret, etc.)
-        # so the prompt never silently blends Nexon opinions into a BYD verdict.
-        nexon_selected = "nexon" in car_model.lower()
-        if nexon_selected:
-            t2 = ALL_DATA.get("teambhp_thread2", {})
-            t3 = ALL_DATA.get("teambhp_thread3", {})
+        # Team-BHP data is India-only; use empty dicts for other countries
+        if country == "india":
+            teambhp_live = bool(teambhp_holder[0] and teambhp_holder[0].get("honest_verdict"))
+            live_t1 = teambhp_holder[0] if teambhp_live else ALL_DATA.get("teambhp_thread1", {})
+            # thread2 / thread3 are static Nexon JSON files.
+            # When a non-Nexon car is selected, we reuse the live_t1 scrape to
+            # fill in supplementary fields (most_honest_quote, biggest_regret, etc.)
+            # so the prompt never silently blends Nexon opinions into a BYD verdict.
+            nexon_selected = "nexon" in car_model.lower()
+            if nexon_selected:
+                t2 = ALL_DATA.get("teambhp_thread2", {})
+                t3 = ALL_DATA.get("teambhp_thread3", {})
+            else:
+                # Use the live scraped data (same car) for supplementary fields
+                t2 = live_t1
+                t3 = live_t1
         else:
-            # Use the live scraped data (same car) for supplementary fields
-            t2 = live_t1
-            t3 = live_t1
+            teambhp_live = False
+            live_t1 = {}
+            t2 = {}
+            t3 = {}
         insights = extract_owner_insights(live_t1, t2, t3)
 
         # ── LLM synthesis ──
         yield f"data: {json.dumps({'type': 'LLM', 'message': '🤖 Synthesising honest verdict...'})}\n\n"
 
         user_desc = query.user_description or (
-            f"I live in {city}, India. "
+            f"I live in {city}, {country.title()}. "
             f"Daily commute: {query.daily_km}km round trip. "
             f"Occasional trips: {query.occasional_km}km one way. "
             f"Car I'm considering: {query.car_model}. "
             f"Home charging: {'Yes' if query.has_home_charging else 'No — will rely on public chargers'}."
         )
 
-        subsidy = get_subsidy_for_city(city)
-        prompt = build_prompt(user_desc, scores, insights, subsidy, car_profile=car_profile)
+        subsidy = get_incentives_for_locale(city, country)
+        prompt = build_prompt(user_desc, scores, insights, subsidy, car_profile=car_profile, country=country)
         verdict_text = call_llm(prompt)
 
         if not verdict_text:
@@ -603,7 +801,7 @@ def stream_verdict(query: QueryRequest):
         charger_fetched = charger_data.get("fetched_at")
         charger_age = None
         if charger_src == "cache":
-            entry = CHARGER_CACHE.get(city)
+            entry = CHARGER_CACHE.get(_charger_cache_key(city, country))
             charger_age = int((time.time() - entry["timestamp"]) / 60) if entry else None
 
         data_freshness = {
@@ -614,7 +812,7 @@ def stream_verdict(query: QueryRequest):
             },
             "teambhp": {
                 "source_type": "live" if teambhp_live else "cache",
-                "fetched_at": TEAMBHP_CACHE.get(car_model, {}).get("data", {}).get("fetched_at") if not teambhp_live else datetime.now(timezone.utc).isoformat(),
+                "fetched_at": TEAMBHP_CACHE.get(_teambhp_cache_key(car_model), {}).get("data", {}).get("fetched_at") if not teambhp_live else datetime.now(timezone.utc).isoformat(),
                 "age_minutes": None,
             },
         }
@@ -625,6 +823,7 @@ def stream_verdict(query: QueryRequest):
             charger_age_str = f" · updated {charger_age}m ago" if charger_age > 0 else " · just scraped"
 
         result = {
+            "country": country,
             "city": city,
             "car": query.car_model,
             "daily_km": query.daily_km,
@@ -638,6 +837,25 @@ def stream_verdict(query: QueryRequest):
                 subsidy["source"],
                 "TinyFish Web Agent (real-time browser automation)",
             ],
+            "operator_report": {
+                "workflow": [
+                    "Discover live charger availability",
+                    "Validate each stop against fast-charger availability",
+                    "Pick fallback stops when a stop has weak/no DC coverage",
+                    "Generate operator action report",
+                ],
+                "recommended_primary_city": city,
+                "fallback_city": next(
+                    (c for c in (COUNTRY_CONFIG.get(country) or COUNTRY_CONFIG["_global"])["default_cities"] if c != city),
+                    city,
+                ),
+                "risk": "high" if scores["occasional_score"] >= 7 else "medium" if scores["occasional_score"] >= 4 else "low",
+                "action": (
+                    "Pre-book charging slots and keep backup stop active"
+                    if scores["occasional_score"] >= 7 else
+                    "Run this workflow before each dispatch window"
+                ),
+            },
         }
 
         # ── Save verdict + compute what_changed ──
@@ -684,20 +902,19 @@ def get_verdict(query: QueryRequest):
     """
     from concurrent.futures import ThreadPoolExecutor
 
-    city = query.city.strip().capitalize()
+    city = _normalize_city(query.city)
+    country = _normalize_country(query.country)
     car_profile = get_car_profile(query.car_model)
-    print(f"\n🌐 Fetching live data for {city} via TinyFish (parallel)...")
+    print(f"\n🌐 Fetching live data for {city}, {country} via TinyFish (parallel)...")
 
     with ThreadPoolExecutor(max_workers=2) as ex:
-        charger_future = ex.submit(fetch_live_chargers, city)
-        teambhp_future = ex.submit(fetch_live_teambhp, query.car_model)
+        charger_future = ex.submit(fetch_live_chargers, city, country, False, 12)
+        teambhp_future = ex.submit(fetch_live_teambhp, query.car_model, False, 12) if country == "india" else None
         charger_data = charger_future.result()
-        teambhp_live = teambhp_future.result()
+        teambhp_live = teambhp_future.result() if teambhp_future is not None else {}
 
     if not charger_data.get("stations"):
-        charger_key = f"chargers_{city.lower()}"
-        charger_data = dict(ALL_DATA.get(charger_key, {"stations": [], "total_found": 0}))
-        charger_data.setdefault("source_type", "static_fallback")
+        charger_data = _static_city_fallback(city, country)
 
     scores = calculate_anxiety_scores(
         charger_data, query.daily_km, query.occasional_km, car_profile=car_profile
@@ -705,26 +922,31 @@ def get_verdict(query: QueryRequest):
     if query.has_home_charging:
         scores["daily_score"] = max(1, scores["daily_score"] - 1)
 
-    teambhp_was_live = bool(teambhp_live and teambhp_live.get("honest_verdict"))
-    live_t1 = teambhp_live if teambhp_was_live else ALL_DATA.get("teambhp_thread1", {})
-
-    # thread2/3 are static Nexon files — only use them for actual Nexon queries.
-    # For all other cars, reuse the live scrape for supplementary fields.
-    nexon_selected_v = "nexon" in query.car_model.lower()
-    t2_v = ALL_DATA.get("teambhp_thread2", {}) if nexon_selected_v else live_t1
-    t3_v = ALL_DATA.get("teambhp_thread3", {}) if nexon_selected_v else live_t1
+    if country == "india":
+        teambhp_was_live = bool(teambhp_live and teambhp_live.get("honest_verdict"))
+        live_t1 = teambhp_live if teambhp_was_live else ALL_DATA.get("teambhp_thread1", {})
+        # thread2/3 are static Nexon files — only use them for actual Nexon queries.
+        # For all other cars, reuse the live scrape for supplementary fields.
+        nexon_selected_v = "nexon" in query.car_model.lower()
+        t2_v = ALL_DATA.get("teambhp_thread2", {}) if nexon_selected_v else live_t1
+        t3_v = ALL_DATA.get("teambhp_thread3", {}) if nexon_selected_v else live_t1
+    else:
+        teambhp_was_live = False
+        live_t1 = {}
+        t2_v = {}
+        t3_v = {}
     insights = extract_owner_insights(live_t1, t2_v, t3_v)
 
     user_desc = query.user_description or (
-        f"I live in {city}, India. "
+        f"I live in {city}, {country.title()}. "
         f"Daily commute: {query.daily_km}km round trip. "
         f"Occasional trips: {query.occasional_km}km one way. "
         f"Car I'm considering: {query.car_model}. "
         f"Home charging: {'Yes' if query.has_home_charging else 'No — will rely on public chargers'}."
     )
 
-    subsidy = get_subsidy_for_city(city)
-    prompt = build_prompt(user_desc, scores, insights, subsidy, car_profile=car_profile)
+    subsidy = get_incentives_for_locale(city, country)
+    prompt = build_prompt(user_desc, scores, insights, subsidy, car_profile=car_profile, country=country)
     verdict = call_llm(prompt)
 
     if not verdict:
@@ -771,6 +993,42 @@ def health():
 
 
 # ─────────────────────────────────────────────────────────
+# /debug-keys — verify environment variable loading
+# Shows present/missing without exposing actual values.
+# ─────────────────────────────────────────────────────────
+
+@app.get("/debug-keys")
+def debug_keys():
+    _root_env = Path(__file__).resolve().parent.parent / ".env"
+    _src_env  = Path(__file__).resolve().parent / ".env"
+    return {
+        "keys": {
+            "ANTHROPIC_API_KEY":  "present" if os.environ.get("ANTHROPIC_API_KEY")  else "MISSING",
+            "FIREWORKS_API_KEY":  "present" if os.environ.get("FIREWORKS_API_KEY")  else "MISSING",
+            "TINYFISH_API_KEY":   "present" if os.environ.get("TINYFISH_API_KEY")   else "MISSING",
+        },
+        "dotenv_files": {
+            "project_root_.env": {
+                "path": str(_root_env),
+                "exists": _root_env.exists(),
+            },
+            "src_.env": {
+                "path": str(_src_env),
+                "exists": _src_env.exists(),
+            },
+        },
+        "llm_will_work": (
+            bool(os.environ.get("ANTHROPIC_API_KEY")) or
+            bool(os.environ.get("FIREWORKS_API_KEY"))
+        ),
+        "tinyfish": {
+            "status": "disabled" if _TINYFISH_DISABLED else ("ready" if TINYFISH_API_KEY else "no_key"),
+            "reason": _TINYFISH_DISABLE_REASON or None,
+        },
+    }
+
+
+# ─────────────────────────────────────────────────────────
 # /cache-status — which cities have warm cache (Fix 3)
 # ─────────────────────────────────────────────────────────
 
@@ -780,14 +1038,23 @@ def cache_status():
     charger_status = {}
 
     # Live-scraped cached cities
-    for city, entry in CHARGER_CACHE.items():
+    for key, entry in CHARGER_CACHE.items():
+        if ":" in key:
+            country, city = key.split(":", 1)
+        else:
+            country, city = "india", key
         age_min = int((now - entry["timestamp"]) / 60)
-        charger_status[city] = {
+        charger_status[f"{country}:{city}"] = {
             "cached": True,
             "age_min": age_min,
             "fresh": age_min < 60,
             "stations": entry["data"].get("total_found", 0),
+            "country": country,
+            "city": city,
         }
+        # Backward compatibility for current India-only frontend mapping.
+        if country == "india":
+            charger_status[city] = charger_status[f"{country}:{city}"]
 
     # Static JSON cities (Nagpur, Pune from day 1)
     for key, val in ALL_DATA.items():
@@ -816,13 +1083,19 @@ def data_freshness():
     now = time.time()
     charger_info = {}
 
-    for city, entry in CHARGER_CACHE.items():
+    for key, entry in CHARGER_CACHE.items():
+        if ":" in key:
+            country, city = key.split(":", 1)
+        else:
+            country, city = "india", key
         age_min = int((now - entry["timestamp"]) / 60)
-        charger_info[city] = {
+        charger_info[f"{country}:{city}"] = {
             "source_type": "live" if age_min == 0 else "cache",
             "age_minutes": age_min,
             "fetched_at": entry["data"].get("fetched_at"),
             "total_stations": entry["data"].get("total_found", 0),
+            "country": country,
+            "city": city,
         }
 
     for key in ALL_DATA:
@@ -852,6 +1125,26 @@ def data_freshness():
 
 
 # ─────────────────────────────────────────────────────────
+# /cars — return car models filtered by country
+# ─────────────────────────────────────────────────────────
+
+@app.get("/cars")
+def list_cars(country: str = "india"):
+    """Returns car models available for the given country.
+    India returns all models; other markets return only globally-sold models.
+    """
+    c = _normalize_country(country)
+    models = get_models_for_country(c)
+    return {
+        "country": c,
+        "models": [
+            {"name": name, "segment": CAR_PROFILES[name]["segment"], "markets": CAR_PROFILES[name]["markets"]}
+            for name in models
+        ],
+    }
+
+
+# ─────────────────────────────────────────────────────────
 # /profile — user preferences (save + retrieve)
 # ─────────────────────────────────────────────────────────
 
@@ -876,20 +1169,19 @@ def get_profile(user_id: str):
 
 @app.post("/compare")
 def compare_cars(req_body: CompareRequest):
-    city = req_body.city.strip().capitalize()
+    city = _normalize_city(req_body.city)
+    country = _normalize_country(req_body.country)
     car_models = req_body.car_models[:3]  # max 3
 
     if not car_models:
         raise HTTPException(status_code=400, detail="Provide at least one car_model")
 
     # One charger fetch shared across all cars (same city)
-    charger_data = fetch_live_chargers(city)
+    charger_data = fetch_live_chargers(city, country=country, quick_mode=True, hard_deadline_sec=3)
     if not charger_data.get("stations"):
-        charger_key = f"chargers_{city.lower()}"
-        charger_data = dict(ALL_DATA.get(charger_key, {"stations": [], "total_found": 0}))
-        charger_data.setdefault("source_type", "static_fallback")
+        charger_data = _static_city_fallback(city, country)
 
-    subsidy = get_subsidy_for_city(city)
+    _subsidy = get_incentives_for_locale(city, country)  # noqa: F841
     results = []
 
     for model in car_models:
@@ -946,6 +1238,7 @@ def compare_cars(req_body: CompareRequest):
     results.sort(key=lambda x: x["daily_score"] + x["occasional_score"])
 
     return {
+        "country": country,
         "city": city,
         "daily_km": req_body.daily_km,
         "occasional_km": req_body.occasional_km,
@@ -967,8 +1260,9 @@ def stream_route(req: RouteRequest):
     Streaming route planner.
     Events: PLANNING, CALCULATING, SCRAPING_STOP, STOP_FOUND, BUILDING_PLAN, COMPLETE, ERROR.
     """
-    from_city   = req.from_city.strip().capitalize()
-    to_city     = req.to_city.strip().capitalize()
+    from_city   = _normalize_city(req.from_city)
+    to_city     = _normalize_city(req.to_city)
+    country     = _normalize_country(req.country)
     car_profile = get_car_profile(req.car_model)
 
     def generate():
@@ -976,7 +1270,7 @@ def stream_route(req: RouteRequest):
         if not route:
             # Unknown route — try TinyFish to discover distance + key stops
             yield f"data: {json.dumps({'type': 'PLANNING', 'message': f'🔍 Route {from_city} → {to_city} not in database — querying live via TinyFish...'})}\n\n"
-            route = _discover_route_via_tinyfish(from_city, to_city)
+            route = _discover_route_via_tinyfish(from_city, to_city, country)
             if not route:
                 supported = ", ".join(f"{a}↔{b}" for a, b in HIGHWAY_ROUTES.keys())
                 yield f"data: {json.dumps({'type': 'ERROR', 'message': f'Could not find route data for {from_city} → {to_city}. Pre-loaded routes: {supported}'})}\n\n"
@@ -1004,7 +1298,7 @@ def stream_route(req: RouteRequest):
                    "message": f"⚡ Checking live chargers at {wp['name']} (km {wp['km']})...",
                    "_wp": wp["name"]})
             try:
-                data = fetch_live_chargers(wp["name"])
+                data = fetch_live_chargers(wp["name"], country=country, quick_mode=True, hard_deadline_sec=3)
             except Exception:
                 data = {"stations": [], "total_found": 0, "source_type": "static_fallback"}
             q.put({"type": "STOP_DONE", "_wp": wp["name"], "_data": data})
@@ -1064,6 +1358,62 @@ def stream_route(req: RouteRequest):
                 "source_type":    cd.get("source_type", "static_fallback"),
             })
 
+        # ── Operator workflow: validate each planned stop and assign live fallback if weak ──
+        yield f"data: {json.dumps({'type': 'VALIDATING_STOPS', 'message': '🧪 Validating each stop for DC availability...'})}\n\n"
+
+        operator_actions = []
+        weak_stops = [s for s in stop_plans if s["dc_stations"] <= 0]
+        route_waypoints = sorted(route.get("waypoints", []), key=lambda x: x["km"])
+
+        for weak in weak_stops:
+            wpt_name = weak["waypoint"]
+            _sw_msg = f"⚠️ {wpt_name} has weak DC coverage. Searching fallback..."
+            yield f"data: {json.dumps({'type': 'STOP_WEAK', 'message': _sw_msg})}\n\n"
+            weak_km = weak["km"]
+            candidates = [
+                wp for wp in route_waypoints
+                if wp["name"] != weak["waypoint"] and abs(wp["km"] - weak_km) <= 140
+            ][:3]
+
+            fallback_rows = []
+            for cand in candidates:
+                try:
+                    data = fetch_live_chargers(cand["name"], country=country, quick_mode=True, hard_deadline_sec=3)
+                except Exception:
+                    data = {"stations": [], "total_found": 0, "source_type": "static_fallback"}
+                stations = data.get("stations", [])
+                dc = [s for s in stations if "DC" in s.get("connector_types", [])]
+                best_kw = max((s.get("power_kw", 0) for s in dc), default=0)
+                fallback_rows.append({
+                    "name": cand["name"],
+                    "dc": len(dc),
+                    "total": data.get("total_found", len(stations)),
+                    "best_kw": best_kw,
+                    "source_type": data.get("source_type", "static_fallback"),
+                })
+
+            fallback_rows.sort(key=lambda x: (x["dc"], x["best_kw"], x["total"]), reverse=True)
+            winner = fallback_rows[0] if fallback_rows and fallback_rows[0]["dc"] > 0 else None
+
+            if winner:
+                winner_name = winner["name"]
+                weak["fallback_stop"] = winner_name
+                weak["fallback_dc_stations"] = winner["dc"]
+                weak["fallback_best_power_kw"] = winner["best_kw"]
+                weak["operator_status"] = "fallback_assigned"
+                operator_actions.append(
+                    f"Replace stop {wpt_name} with fallback {winner_name} ({winner['dc']} DC, {winner['best_kw']}kW max)."
+                )
+                _fa_msg = f"✅ Fallback set: {wpt_name} → {winner_name}"
+                yield f"data: {json.dumps({'type': 'FALLBACK_ASSIGNED', 'message': _fa_msg})}\n\n"
+            else:
+                weak["operator_status"] = "manual_review_required"
+                operator_actions.append(
+                    f"Manual review required at {wpt_name}: no reliable fallback within 140km."
+                )
+                _fm_msg = f"🚨 No fallback found near {wpt_name}. Manual intervention needed."
+                yield f"data: {json.dumps({'type': 'FALLBACK_MISSING', 'message': _fm_msg})}\n\n"
+
         total_charge_min  = sum(s["charge_time_min"] for s in stop_plans)
         driving_time_hr   = round(route["distance_km"] / 70, 1)   # ~70kmph avg Indian highway
         total_time_hr     = round(driving_time_hr + total_charge_min / 60, 1)
@@ -1073,6 +1423,7 @@ def stream_route(req: RouteRequest):
         result = {
             "from_city":            from_city,
             "to_city":              to_city,
+            "country":              country,
             "distance_km":          route["distance_km"],
             "highway":              route["highway"],
             "car":                  req.car_model,
@@ -1085,6 +1436,16 @@ def stream_route(req: RouteRequest):
             "trip_feasible":        feasible,
             "risk_level": ("comfortable" if len(stop_plans) <= 1 and feasible
                            else "manageable" if feasible else "challenging"),
+            "operator_action_report": {
+                "workflow_completed": [
+                    "discover_live_charger_availability",
+                    "validate_each_stop",
+                    "assign_fallbacks_for_weak_stops",
+                    "generate_dispatch_actions",
+                ],
+                "weak_stops_detected": len(weak_stops),
+                "actions": operator_actions or ["No fallback actions required. Proceed with primary plan."],
+            },
         }
 
         yield f"data: {json.dumps({'type': 'COMPLETE', 'data': result})}\n\n"
@@ -1111,14 +1472,16 @@ def intelligence_report(req: IntelligenceRequest):
     """
     import queue as _queue
 
-    city  = req.city.strip().capitalize()
-    state = CITY_STATE.get(city, city.lower())
+    city = _normalize_city(req.city)
+    country = _normalize_country(req.country)
+    _state = _market_region_for_city(city, country)  # noqa: F841  (used in goal f-string)
 
     def goal(network):
-        return f"""Find all EV charging stations for {city}, India on this page.
+        return f"""Find all EV charging stations for {city}, {country.title()} on this page.
 Return JSON:
 {{
   "city": "{city}",
+  "country": "{country}",
   "network": "{network}",
   "stations": [
     {{
@@ -1132,14 +1495,10 @@ Return JSON:
 }}
 Be honest. Return total_found: 0 if none found."""
 
-    sources = [
-        {"name": "ChargeZone", "url": f"https://chargezone.in/charging-stations/{state}/{city}", "profile": "lite"},
-        {"name": "EVSE India",  "url": f"https://evseindia.org/charging-station/{city}",          "profile": "lite"},
-        {"name": "Statiq",      "url": f"https://www.statiq.in/charging-stations/{city.lower()}", "profile": "stealth"},
-    ]
+    sources = _provider_sources_for_city(city, country)
 
     def generate():
-        yield f"data: {json.dumps({'type': 'SCANNING', 'message': f'Scanning {len(sources)} networks for {city} in parallel...'})}\n\n"
+        yield f"data: {json.dumps({'type': 'SCANNING', 'message': f'Scanning {len(sources)} networks for {city}, {country.title()} in parallel...'})}\n\n"
 
         result_q = _queue.Queue()
 
@@ -1203,6 +1562,7 @@ Be honest. Return total_found: 0 if none found."""
 
         payload = {
             "type":                        "COMPLETE",
+            "country":                     country,
             "city":                        city,
             "report_type":                 req.report_type,
             "total_stations_all_networks": total,
@@ -1228,14 +1588,16 @@ Be honest. Return total_found: 0 if none found."""
 # ROUTE DISCOVERY — TinyFish fallback for unknown city pairs
 # ─────────────────────────────────────────────────────────
 
-def _discover_route_via_tinyfish(from_city: str, to_city: str) -> dict | None:
+def _discover_route_via_tinyfish(from_city: str, to_city: str, country: str) -> dict | None:
     """
     When a city pair isn't in HIGHWAY_ROUTES, asks TinyFish to discover the
     distance and major waypoints via Google Maps / MapMyIndia.
     Returns a route dict compatible with HIGHWAY_ROUTES schema, or None on failure.
     """
-    url = f"https://www.google.com/maps/dir/{from_city}+India/{to_city}+India"
-    goal = f"""Find the driving distance from {from_city} to {to_city} in India.
+    c = _normalize_country(country)
+    country_label = c.title()
+    url = f"https://www.google.com/maps/dir/{from_city}+{country_label}/{to_city}+{country_label}"
+    goal = f"""Find the driving distance from {from_city} to {to_city} in {country_label}.
 Return JSON exactly like this:
 {{
   "distance_km": 350,
@@ -1258,6 +1620,9 @@ Be accurate. Do not invent waypoints — only list real towns on this route."""
 
 def _tinyfish_call(url: str, goal: str, profile: str = "lite", timeout: int = 120) -> dict:
     """Single TinyFish SSE call — returns result or empty dict on failure."""
+    global _TINYFISH_DISABLED, _TINYFISH_DISABLE_REASON
+    if _TINYFISH_DISABLED:
+        return {}  # circuit open — skip silently
     try:
         with req.post(
             TINYFISH_BASE_URL,
@@ -1271,7 +1636,21 @@ def _tinyfish_call(url: str, goal: str, profile: str = "lite", timeout: int = 12
             timeout=timeout,
         ) as resp:
             if resp.status_code != 200:
-                print(f"⚠️  TinyFish HTTP {resp.status_code}")
+                # Try to extract a human-readable reason from the response body
+                try:
+                    err_body = resp.json()
+                    err_msg = (err_body.get("error") or {}).get("message") or str(err_body)
+                except Exception:
+                    err_msg = resp.text[:200] or f"HTTP {resp.status_code}"
+                # Unrecoverable errors: trip the circuit breaker so we don't spam
+                unrecoverable = resp.status_code in (401, 403) or "credits" in err_msg.lower() or "forbidden" in err_msg.lower()
+                if unrecoverable and not _TINYFISH_DISABLED:
+                    _TINYFISH_DISABLED = True
+                    _TINYFISH_DISABLE_REASON = err_msg
+                    print(f"🚫 TinyFish disabled for this session: {err_msg}")
+                    print("   👉 Top up credits at https://tinyfish.ai or set a new TINYFISH_API_KEY in .env")
+                elif not unrecoverable:
+                    print(f"⚠️  TinyFish HTTP {resp.status_code}: {err_msg}")
                 return {}
             for raw_line in resp.iter_lines():
                 if not raw_line:
@@ -1291,8 +1670,11 @@ def _tinyfish_call(url: str, goal: str, profile: str = "lite", timeout: int = 12
                         return {}
                 except json.JSONDecodeError:
                     continue
+    except (req.exceptions.Timeout, req.exceptions.ConnectionError):
+        pass  # timeouts/connection drops are expected with short deadlines
     except Exception as e:
-        print(f"⚠️  TinyFish call failed: {e}")
+        if "timed out" not in str(e).lower() and "timeout" not in str(e).lower():
+            print(f"⚠️  TinyFish call failed: {e}")
     return {}
 
 
@@ -1300,27 +1682,51 @@ def _tinyfish_call(url: str, goal: str, profile: str = "lite", timeout: int = 12
 # LIVE CHARGER FETCHER — with TTL cache (Fix 4)
 # ─────────────────────────────────────────────────────────
 
-def fetch_live_chargers(city: str) -> dict:
-    """
-    Fetches live charger data for a city. Checks TTL cache first (1hr).
-    Tries multiple sources in order of reliability.
-    """
-    # ── Cache check ──
-    cached = CHARGER_CACHE.get(city)
-    if cached and (time.time() - cached["timestamp"]) < CACHE_TTL_SECONDS:
-        age_min = int((time.time() - cached["timestamp"]) / 60)
-        print(f"📦 Charger data from cache for {city} ({age_min}m ago)")
-        data = dict(cached["data"])
-        data["source_type"] = "cache"
-        data["age_minutes"] = age_min
-        return data
+def _normalize_city(city: str) -> str:
+    return " ".join(part.capitalize() for part in (city or "").split()).strip()
 
-    city_lower = city.lower()
-    goal_template = lambda network: f"""
-Find all EV charging stations listed for {city}, India on this page.
+
+def _charger_cache_key(city: str, country: str) -> str:
+    return f"{_normalize_country(country)}:{_normalize_city(city)}"
+
+
+def _teambhp_cache_key(car_model: str) -> str:
+    return car_model.strip().lower()
+
+
+def _static_city_fallback(city: str, country: str) -> dict:
+    # Static JSON fallback is currently available only for India seed cities.
+    if _normalize_country(country) != "india":
+        return {"stations": [], "total_found": 0, "source_type": "static_fallback", "fetched_at": None}
+    key = f"chargers_{city.lower()}"
+    data = dict(ALL_DATA.get(key, {"stations": [], "total_found": 0}))
+    data.setdefault("source_type", "static_fallback")
+    data.setdefault("fetched_at", None)
+    return data
+
+
+def _provider_sources_for_city(city: str, country: str) -> list[dict]:
+    c = _normalize_country(country)
+    state = _market_region_for_city(city, c)
+    cfg = COUNTRY_CONFIG.get(c) or COUNTRY_CONFIG["_global"]
+    providers = cfg["providers"]
+    out = []
+    for p in providers:
+        out.append({
+            "name": p["name"],
+            "profile": p.get("profile", "lite"),
+            "url": p["url"].format(city=city, city_lower=city.lower(), state=state),
+        })
+    return out
+
+
+def _charger_goal(city: str, country: str, network: str) -> str:
+    return f"""
+Find all EV charging stations listed for {city}, {country} on this page.
 Return JSON:
 {{
   "city": "{city}",
+  "country": "{country}",
   "network": "{network}",
   "stations": [
     {{
@@ -1332,70 +1738,179 @@ Return JSON:
   ],
   "total_found": 0
 }}
-If no stations found for {city}, return total_found: 0 and empty stations array. Be honest.
+If no stations found, return total_found: 0 and empty stations array.
 """
 
-    state = CITY_STATE.get(city, city.lower())
 
-    # Source priority order — most reliable first based on past tests
-    sources = [
-        {
-            "name": "ChargeZone",
-            "url": f"https://chargezone.in/charging-stations/{state}/{city}",
-            "profile": "lite",
-        },
-        {
-            "name": "EVSE India",
-            "url": f"https://evseindia.org/charging-station/{city}",
-            "profile": "lite",
-        },
-        {
-            "name": "Statiq (stealth)",
-            "url": f"https://www.statiq.in/charging-stations/{city_lower}",
-            "profile": "stealth",
-        },
-    ]
+async def _parallel_tinyfish_sources(sources: list[dict], goal_builder, timeout_per_source: int) -> list[tuple[dict, dict]]:
+    async def one(source: dict):
+        result = await asyncio.to_thread(
+            _tinyfish_call,
+            source["url"],
+            goal_builder(source["name"]),
+            source.get("profile", "lite"),
+            timeout_per_source,
+        )
+        return source, result if isinstance(result, dict) else {}
 
-    for source in sources:
-        print(f"   🌐 Trying {source['name']} for {city}...")
-        # 110s per source: 3 sources × 110s = 330s < 400s queue timeout
-        result = _tinyfish_call(source["url"], goal_template(source["name"]), source["profile"], timeout=110)
-        stations = result.get("stations", [])
+    tasks = [one(source) for source in sources]
+    raw = await asyncio.gather(*tasks, return_exceptions=True)
+    out: list[tuple[dict, dict]] = []
+    for item in raw:
+        if isinstance(item, Exception):
+            continue
+        # item is already checked to be a tuple
+        out.append(item)  # type: ignore[arg-type]
+    return out
+
+
+def _best_charger_result(city: str, country: str, results: list[tuple[dict, dict]]) -> dict:
+    candidates: list[tuple[int, dict, dict]] = []
+    for source, result in results:
+        stations = result.get("stations") or []
         if stations:
-            result["total_found"] = result.get("total_found") or len(stations)
-            now_iso = datetime.now(timezone.utc).isoformat()
-            result["source_type"] = "live"
-            result["fetched_at"] = now_iso
-            print(f"   ✅ {source['name']}: {result['total_found']} stations in {city}")
-            # ── Update cache ──
-            CHARGER_CACHE[city] = {"data": result, "timestamp": time.time()}
-            return result
-        else:
-            print(f"   ⚠️  {source['name']}: 0 stations for {city}")
+            candidates.append((len(stations), source, result))
+    if not candidates:
+        return {}
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    _, source, winner = candidates[0]
+    winner = dict(winner)
+    winner["total_found"] = winner.get("total_found") or len(winner.get("stations", []))
+    winner["source_type"] = "live"
+    winner["country"] = _normalize_country(country)
+    winner["city"] = city
+    winner["provider"] = source["name"]
+    winner["fetched_at"] = datetime.now(timezone.utc).isoformat()
+    return winner
 
-    return {"stations": [], "total_found": 0, "source_type": "static_fallback", "fetched_at": None}
+
+def _refresh_chargers_worker(city: str, country: str, key: str):
+    try:
+        live = fetch_live_chargers(city, country=country, quick_mode=False, hard_deadline_sec=12)
+        if live.get("stations"):
+            print(f"🔄 Background refresh updated {city}, {country}: {live.get('total_found', 0)} stations")
+    finally:
+        with _REFRESH_LOCK:
+            _REFRESH_IN_FLIGHT.discard(key)
+
+
+def _ensure_background_refresh(city: str, country: str):
+    key = _charger_cache_key(city, country)
+    with _REFRESH_LOCK:
+        if key in _REFRESH_IN_FLIGHT:
+            return False
+        _REFRESH_IN_FLIGHT.add(key)
+    threading.Thread(target=_refresh_chargers_worker, args=(city, country, key), daemon=True).start()
+    return True
+
+def fetch_live_chargers(city: str, country: str = "India", quick_mode: bool = False, hard_deadline_sec: int = 3) -> dict:
+    """
+    Fetches live charger data for a city + country.
+    - quick_mode=True: returns cached/static in <= hard_deadline_sec and triggers background refresh.
+    - quick_mode=False: performs full parallel live scrape fan-out.
+    """
+    city = _normalize_city(city)
+    c = _normalize_country(country)
+    cache_key = _charger_cache_key(city, c)
+
+    cached = CHARGER_CACHE.get(cache_key)
+    if cached and (time.time() - cached["timestamp"]) < CACHE_TTL_SECONDS:
+        age_min = int((time.time() - cached["timestamp"]) / 60)
+        print(f"📦 Charger data from cache for {city}, {c} ({age_min}m ago)")
+        data = dict(cached["data"])
+        data["source_type"] = "cache"
+        data["age_minutes"] = age_min
+        return data
+
+    stale_cache = dict(cached["data"]) if cached else None
+    static_fallback = _static_city_fallback(city, c)
+    sources = _provider_sources_for_city(city, c)
+
+    async def run_parallel_scrape(timeout_per_source: int) -> dict:
+        results = await _parallel_tinyfish_sources(
+            sources,
+            lambda network: _charger_goal(city, c, network),
+            timeout_per_source,
+        )
+        return _best_charger_result(city, c, results)
+
+    if quick_mode:
+        fallback = stale_cache or static_fallback
+        fallback = dict(fallback)
+        fallback["source_type"] = fallback.get("source_type", "cache" if stale_cache else "static_fallback")
+        fallback["country"] = c
+        fallback["city"] = city
+
+        try:
+            live = asyncio.run(asyncio.wait_for(run_parallel_scrape(timeout_per_source=hard_deadline_sec), timeout=hard_deadline_sec))
+        except Exception:
+            live = {}
+
+        if live.get("stations"):
+            CHARGER_CACHE[cache_key] = {"data": live, "timestamp": time.time()}
+            return live
+
+        refresh_started = _ensure_background_refresh(city, c)
+        fallback["background_refresh_started"] = refresh_started
+        fallback.setdefault("fetched_at", None)
+        return fallback
+
+    # Full live scrape mode: run all providers in parallel with bounded timeout.
+    try:
+        live = asyncio.run(asyncio.wait_for(run_parallel_scrape(timeout_per_source=hard_deadline_sec), timeout=hard_deadline_sec + 1))
+    except Exception:
+        live = {}
+
+    if live.get("stations"):
+        CHARGER_CACHE[cache_key] = {"data": live, "timestamp": time.time()}
+        return live
+
+    fallback = stale_cache or static_fallback
+    fallback = dict(fallback)
+    fallback["country"] = c
+    fallback["city"] = city
+    fallback.setdefault("source_type", "static_fallback")
+    fallback.setdefault("fetched_at", None)
+    return fallback
 
 
 # ─────────────────────────────────────────────────────────
 # LIVE TEAM-BHP FETCHER — scrapes live with TinyFish (Fix 1)
 # ─────────────────────────────────────────────────────────
 
-def fetch_live_teambhp(car_model: str) -> dict:
+def _teambhp_sources(car_model: str) -> list[dict]:
+    search_term = car_model.replace(" ", "+")
+    return [
+        {
+            "name": "Team-BHP Search",
+            "url": f"https://www.team-bhp.com/forum/search.php?searchid=0&q={search_term}+review+ownership&submit=Search",
+            "profile": "stealth",
+        },
+        {
+            "name": "Team-BHP EV Forum",
+            "url": f"https://www.team-bhp.com/forum/electric-cars/?q={search_term}",
+            "profile": "stealth",
+        },
+        {
+            "name": "Google site:Team-BHP",
+            "url": f"https://www.google.com/search?q=site%3Ateam-bhp.com+{search_term}+ownership+review",
+            "profile": "lite",
+        },
+    ]
+
+
+def fetch_live_teambhp(car_model: str, quick_mode: bool = False, hard_deadline_sec: int = 3) -> dict:
     """
     Scrapes Team-BHP live for owner insights on the given EV model.
     Returns data compatible with teambhp_thread1 schema.
     Checks TTL cache first; falls back to static JSON if scrape fails.
     """
-    # ── Cache check ──
-    cached = TEAMBHP_CACHE.get(car_model)
+    cache_key = _teambhp_cache_key(car_model)
+    cached = TEAMBHP_CACHE.get(cache_key)
     if cached and (time.time() - cached["timestamp"]) < CACHE_TTL_SECONDS:
         age_min = int((time.time() - cached["timestamp"]) / 60)
         print(f"📦 Team-BHP from cache for {car_model} ({age_min}m ago)")
         return cached["data"]
-
-    # Team-BHP search URL for this EV model
-    search_term = car_model.replace(" ", "+")
-    url = f"https://www.team-bhp.com/forum/search.php?searchid=0&q={search_term}+review+ownership&submit=Search"
 
     goal = f"""Search Team-BHP forum for owner reviews of the {car_model} electric vehicle.
 Read the search results and find real, long-term owner experiences.
@@ -1429,10 +1944,56 @@ Use ONLY real data from the forum. Be honest about issues — accuracy is what m
 If you cannot find specific numbers, return null for that field. Do not invent or estimate.
 """
 
-    result = _tinyfish_call(url, goal, profile="stealth", timeout=150)
+    sources = _teambhp_sources(car_model)
+
+    async def run_parallel_teambhp(timeout_per_source: int) -> dict:
+        results = await _parallel_tinyfish_sources(
+            sources,
+            lambda _network: goal,
+            timeout_per_source,
+        )
+        # Pick first valid result with honest_verdict
+        for _source, result in results:
+            if result.get("honest_verdict"):
+                result = dict(result)
+                result["source_type"] = "live"
+                result["fetched_at"] = datetime.now(timezone.utc).isoformat()
+                return result
+        return {}
+
+    if quick_mode:
+        try:
+            result = asyncio.run(asyncio.wait_for(run_parallel_teambhp(timeout_per_source=hard_deadline_sec), timeout=hard_deadline_sec))
+        except Exception:
+            result = {}
+        if result and result.get("honest_verdict"):
+            TEAMBHP_CACHE[cache_key] = {"data": result, "timestamp": time.time()}
+            print(f"🔑 Team-BHP scraped live for {car_model}")
+            return result
+        # Hard deadline mode: return cache/static immediately, refresh in background.
+        stale = dict(cached["data"]) if cached else None
+        fallback = stale or ALL_DATA.get("teambhp_thread1", {})
+        fallback = dict(fallback)
+        fallback.setdefault("source_type", "cache" if stale else "static_fallback")
+
+        def bg_refresh():
+            try:
+                full = fetch_live_teambhp(car_model, quick_mode=False, hard_deadline_sec=12)
+                if full.get("honest_verdict"):
+                    print(f"🔄 Team-BHP background refresh updated {car_model}")
+            except Exception:
+                pass
+
+        threading.Thread(target=bg_refresh, daemon=True).start()
+        return fallback
+
+    try:
+        result = asyncio.run(asyncio.wait_for(run_parallel_teambhp(timeout_per_source=hard_deadline_sec), timeout=hard_deadline_sec + 1))
+    except Exception:
+        result = {}
 
     if result and result.get("honest_verdict"):
-        TEAMBHP_CACHE[car_model] = {"data": result, "timestamp": time.time()}
+        TEAMBHP_CACHE[cache_key] = {"data": result, "timestamp": time.time()}
         print(f"🔑 Team-BHP scraped live for {car_model}")
         return result
 
@@ -1456,10 +2017,14 @@ def warm_cache():
     waypoint_warmup = ["Kolhapur", "Khopoli", "Vellore", "Krishnagiri"]
     warmup_cities = city_warmup + waypoint_warmup
     print("\n🔥 Warming cache for major cities + route waypoints in background...")
+    if _TINYFISH_DISABLED:
+        print(f"   ⏭️  TinyFish disabled ({_TINYFISH_DISABLE_REASON}) — skipping live warmup, using static data")
+        return
 
     for city in warmup_cities:
         # Skip if recently cached
-        cached = CHARGER_CACHE.get(city)
+        cache_key = _charger_cache_key(city, "india")
+        cached = CHARGER_CACHE.get(cache_key)
         if cached and (time.time() - cached["timestamp"]) < CACHE_TTL_SECONDS:
             print(f"   ♻️  {city}: already in cache")
             continue
@@ -1471,7 +2036,7 @@ def warm_cache():
 
         try:
             print(f"   🌐 Warming {city}...")
-            data = fetch_live_chargers(city)
+            data = fetch_live_chargers(city, country="india", quick_mode=False, hard_deadline_sec=12)
             if data.get("stations"):
                 print(f"   ✅ {city}: {data['total_found']} stations cached")
             else:
