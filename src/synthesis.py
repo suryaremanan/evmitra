@@ -4,12 +4,15 @@ The complete pipeline: load all data → score → prompt → verdict
 """
 
 import json
+import logging
 import math
 import os
 import requests
 from pathlib import Path
 
 from car_profiles import CAR_PROFILES, get_profile
+
+logger = logging.getLogger("evmitra")
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -31,10 +34,10 @@ def load_json(filename):
         with open(file_path, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
-        print(f"⚠️  {filename} not found — using empty dict")
+        logger.warning("%s not found — using empty dict", filename)
         return {}
     except json.JSONDecodeError as e:
-        print(f"⚠️  {filename} has bad JSON: {e}")
+        logger.warning("%s has bad JSON: %s", filename, e)
         return {}
 
 
@@ -50,13 +53,14 @@ def load_all_data():
         "ocm_nagpur":       load_json("ocm_nagpur.json"),
     }
 
-    print("\n📂 Data files loaded:")
     for name, content in data.items():
-        status = "✅" if content else "⚠️  empty"
-        count = ""
-        if isinstance(content, dict) and "stations" in content:
-            count = f"({content.get('total_found', len(content['stations']))} stations)"
-        print(f"   {status} {name} {count}")
+        if content:
+            extra = ""
+            if isinstance(content, dict) and "stations" in content:
+                extra = f" ({content.get('total_found', len(content['stations']))} stations)"
+            logger.info("  loaded %s%s", name, extra)
+        else:
+            logger.warning("  empty %s", name)
 
     return data
 
@@ -240,62 +244,72 @@ def extract_owner_insights(t1, t2, t3):
 # car_profile drives all financial and range figures.
 # ─────────────────────────────────────────────────────────
 
-def build_prompt(user_input, scores, insights, subsidy, car_profile: dict = None):
+def build_prompt(user_input, scores, insights, subsidy, car_profile: dict = None, country: str = "india"):
     """Build the LLM synthesis prompt with car-specific data."""
     if car_profile is None:
         car_profile = get_profile("Tata Nexon EV Max")
 
+    country_lower = (country or "india").lower()
+    is_india = country_lower == "india"
+
+    # ── Currency and locale config ──
+    _LOCALE = {
+        "india":   {"sym": "₹",  "unit": "lakhs", "divisor": 100_000, "petrol_per_km": 7.0,  "fuel_label": "petrol"},
+        "uae":     {"sym": "AED","unit": "k",      "divisor": 1_000,   "petrol_per_km": 0.35, "fuel_label": "petrol"},
+        "uk":      {"sym": "£",  "unit": "k",      "divisor": 1_000,   "petrol_per_km": 0.18, "fuel_label": "petrol"},
+        "usa":     {"sym": "$",  "unit": "k",      "divisor": 1_000,   "petrol_per_km": 0.12, "fuel_label": "gas"},
+        "germany": {"sym": "€",  "unit": "k",      "divisor": 1_000,   "petrol_per_km": 0.18, "fuel_label": "petrol"},
+    }
+    loc = _LOCALE.get(country_lower, {"sym": "",  "unit": "",  "divisor": 1, "petrol_per_km": 0.15, "fuel_label": "fuel"})
+    sym = loc["sym"]
+    fuel_label = loc["fuel_label"]
+
     issues_text      = "\n".join(f"  - {i}" for i in insights["long_term_issues"][:4])
     positives_text   = "\n".join(f"  - {p}" for p in insights["things_owners_love"][:3])
     discoveries_text = "\n".join(f"  - {d}" for d in insights["unexpected_discoveries"][:3])
+    has_owner_data   = bool(insights.get("verdict_1") or issues_text or positives_text)
 
-    total_saving = subsidy.get("total_estimated_saving_inr", 0)
-    saving_lakhs = total_saving / 100_000
+    # ── Subsidy / incentive text ──
+    if is_india:
+        total_saving = subsidy.get("total_estimated_saving_inr", 0)
+        saving_display = total_saving / 100_000
+        incentive_line = (
+            f"{subsidy.get('state_name', 'State')} tax/fee exemptions: "
+            f"~{sym}{saving_display:.1f} lakhs\n"
+            f"  FAME II: Ended March 2024 — no direct purchase subsidy currently"
+        )
+    else:
+        incentive_notes = [i.get("description", "") for i in (subsidy.get("incentives") or []) if i.get("description")]
+        if incentive_notes:
+            incentive_line = "Government incentives available:\n" + "\n".join(f"  - {n}" for n in incentive_notes[:3])
+        else:
+            incentive_line = subsidy.get("note", "Check local government website for current EV incentives.")
 
-    # Financial figures from car profile (not hardcoded Nexon values)
+    # ── Financial figures ──
     ev_cost_per_km = car_profile.get("running_cost_per_km_inr", 1.4)
     ex_showroom    = car_profile.get("ex_showroom_inr", 2_000_000)
     mfr_claim_km   = car_profile.get("manufacturer_range_claim_km", 312)
     real_range     = car_profile.get("real_range_city_km", 180)
     charge_time    = car_profile.get("full_charge_min_dc", 57)
     charge_kw      = car_profile.get("dc_fast_charge_kw", 50)
-    ex_showroom_l  = ex_showroom / 100_000
 
-    petrol_cost_per_km = 7.0
+    petrol_cost_per_km = loc["petrol_per_km"]
     saving_per_km  = petrol_cost_per_km - ev_cost_per_km
     annual_km      = scores["daily_km"] * 300
     annual_saving  = annual_km * saving_per_km
 
-    prompt = f"""
-You are EV Mitra — the most honest EV advisor in India.
-You are a knowledgeable friend, not a salesperson.
-Your job: give the user honest, specific, actionable advice.
+    # Format price for display — keep INR in lakhs, others as raw number
+    if is_india:
+        price_str = f"{sym}{ex_showroom / 100_000:.1f} lakhs ex-showroom"
+    else:
+        price_str = f"approx. {sym}{ex_showroom / 100_000:.0f}k (India price reference; verify local pricing)"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-USER SITUATION
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-{user_input}
+    # ── Owner source label ──
+    owner_source = "Team-BHP (India's largest owner forum)" if is_india else "owner forums / press long-term reviews"
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-REAL DATA (gathered live, not from brochures)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-CAR SPECS (real-world, Team-BHP verified):
-  Model: {car_profile.get("segment", "EV")} — ₹{ex_showroom_l:.1f} lakhs ex-showroom
-  Real range (city, AC on): {real_range}km  ← NOT the {mfr_claim_km}km manufacturer claim
-  DC fast charge: {charge_kw}kW — {charge_time} min for 10→80%
-
-CHARGING INFRASTRUCTURE (live-scraped):
-  Total stations in city: {scores['total_stations']}
-  DC fast chargers (actually useful): {scores['fast_dc_chargers']}
-  High-power ≥50kW chargers: {scores['high_power_chargers_50kw_plus']}
-  Data confidence: {scores['confidence'].upper()}
-
-ANXIETY SCORES (calibrated formula):
-  Daily commute ({scores['daily_km']}km): {scores['daily_score']}/10 — {scores['daily_rationale']}
-  Long trip ({scores['occasional_km']}km): {scores['occasional_score']}/10 — {scores['occasional_rationale']}
-
-REAL OWNER EXPERIENCES (Team-BHP):
+    # ── Owner data section ──
+    if has_owner_data:
+        owner_section = f"""REAL OWNER EXPERIENCES ({owner_source}):
   Overall verdict: "{insights['verdict_1']}"
   On charging reliability: "{insights['charging_quote']}"
   On manufacturer range claims: "{insights['range_lie_quote']}"
@@ -310,13 +324,49 @@ REAL OWNER EXPERIENCES (Team-BHP):
 {discoveries_text}
 
   What owners genuinely love:
-{positives_text}
+{positives_text}"""
+    else:
+        owner_section = f"""OWNER DATA NOTE:
+  No localised owner forum data available for {country.title()} yet.
+  Base your CHARGING INFRASTRUCTURE and SCORES sections on the scraped charger data.
+  For owner experience: use your general knowledge of this car model's reliability,
+  known issues, and user sentiment from global reviews. Be honest about data gaps."""
+
+    prompt = f"""
+You are EV Mitra — the most honest EV advisor for {country.title()}.
+You are a knowledgeable friend, not a salesperson.
+Your job: give the user honest, specific, actionable advice.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+USER SITUATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{user_input}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REAL DATA (gathered live, not from brochures)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CAR SPECS (real-world data):
+  Model: {car_profile.get("segment", "EV")} — {price_str}
+  Real range (city, AC on): {real_range}km  ← NOT the {mfr_claim_km}km manufacturer claim
+  DC fast charge: {charge_kw}kW — {charge_time} min for 10→80%
+
+CHARGING INFRASTRUCTURE (live-scraped):
+  Total stations in city: {scores['total_stations']}
+  DC fast chargers (actually useful): {scores['fast_dc_chargers']}
+  High-power ≥50kW chargers: {scores['high_power_chargers_50kw_plus']}
+  Data confidence: {scores['confidence'].upper()}
+
+ANXIETY SCORES (calibrated formula):
+  Daily commute ({scores['daily_km']}km): {scores['daily_score']}/10 — {scores['daily_rationale']}
+  Long trip ({scores['occasional_km']}km): {scores['occasional_score']}/10 — {scores['occasional_rationale']}
+
+{owner_section}
 
 FINANCIAL DATA:
-  Running cost: ₹{ev_cost_per_km}/km (EV) vs ₹{petrol_cost_per_km}/km (petrol)
-  Annual saving: ₹{annual_saving:,.0f} at {annual_km}km/year
-  {subsidy.get("state_name", "State")} tax/fee exemptions: ~₹{saving_lakhs:.1f} lakhs
-  FAME II: Ended March 2024 — no direct purchase subsidy currently
+  Running cost: {sym}{ev_cost_per_km}/km (EV) vs {sym}{petrol_cost_per_km}/km ({fuel_label})
+  Annual saving: {sym}{annual_saving:,.0f} at {annual_km}km/year
+  {incentive_line}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YOUR RESPONSE FORMAT — follow exactly
@@ -330,19 +380,20 @@ Long trips: {scores['occasional_score']}/10
 [One sentence — specific to their trip distance vs real range]
 
 📊 WHAT REAL OWNERS ACTUALLY EXPERIENCE
-[3-4 sentences using real owner data. Quote naturally. Include real vs claimed range.
-Feel like a friend sharing research, not a bullet list.]
+[3-4 sentences using the owner data above. Quote naturally. Include real vs claimed range.
+Feel like a friend sharing research, not a bullet list.
+If no owner data: use your general knowledge and explicitly say it's based on global reviews.]
 
 ⚠️  THINGS NOBODY TELLS YOU BEFORE BUYING
-[Exactly 3 specific issues from owner data. Direct. No softening.]
+[Exactly 3 specific issues from owner data or global knowledge. Direct. No softening.]
 
 💚 WHAT'S GENUINELY GREAT
 [2-3 things owners actually love. No marketing language.]
 
 💰 YOUR ACTUAL NUMBERS
-Running cost: ₹{ev_cost_per_km}/km vs ₹{petrol_cost_per_km}/km petrol
-Annual saving: ₹{annual_saving:,.0f} at your usage
-[State tax/fee note + FAME II status in one sentence]
+Running cost: {sym}{ev_cost_per_km}/km vs {sym}{petrol_cost_per_km}/km {fuel_label}
+Annual saving: {sym}{annual_saving:,.0f} at your usage
+[Incentive/policy note in one sentence]
 
 🎯 HONEST VERDICT
 [2-3 sentences. Most important part. Specific to their city, routes, situation.
@@ -354,7 +405,7 @@ Do NOT hedge. Real friend, real answer. End with one actionable recommendation.]
 STRICT RULES:
 - Never use "exciting", "revolutionary", "game-changer", "seamless"
 - Never say "it depends" without immediately saying what it depends on
-- Always use ₹ not $ or Rs
+- Use the correct local currency ({sym}) — do NOT use {"₹" if sym != "₹" else "$ or £"}
 - State problems seriously if data shows serious problems
 - Name the user's city specifically in the verdict
 - Max 400 words total
@@ -380,12 +431,12 @@ def call_llm(prompt):
                 max_tokens=800,
                 messages=[{"role": "user", "content": prompt}]
             )
-            print("✅ Used Anthropic Claude")
+            logger.info("LLM: Anthropic Claude")
             return msg.content[0].text
         except ImportError:
-            print("⚠️  anthropic package not installed — pip install anthropic")
+            logger.warning("anthropic package not installed — pip install anthropic")
         except Exception as e:
-            print(f"⚠️  Anthropic failed: {e}")
+            logger.warning("Anthropic failed: %s", e)
 
     fireworks_key = os.environ.get("FIREWORKS_API_KEY")
     if fireworks_key:
@@ -397,19 +448,23 @@ def call_llm(prompt):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "accounts/fireworks/models/llama-v3p1-8b-instruct",
+                    "model": "accounts/fireworks/models/llama-v3p3-70b-instruct",
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": 800,
                     "temperature": 0.3,
                 },
                 timeout=30,
             )
-            print("✅ Used Fireworks.ai (LLaMA 3.1)")
-            return resp.json()["choices"][0]["message"]["content"]
+            data = resp.json()
+            if "choices" not in data:
+                logger.warning("Fireworks non-chat response: %s", str(data)[:300])
+                return None
+            logger.info("LLM: Fireworks.ai (LLaMA 3.1)")
+            return data["choices"][0]["message"]["content"]
         except Exception as e:
-            print(f"⚠️  Fireworks failed: {e}")
+            logger.warning("Fireworks failed: %s", e)
 
-    print("❌ No LLM API key found. Set ANTHROPIC_API_KEY or FIREWORKS_API_KEY.")
+    logger.error("No LLM API key found. Set ANTHROPIC_API_KEY or FIREWORKS_API_KEY.")
     return None
 
 

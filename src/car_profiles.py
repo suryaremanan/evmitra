@@ -20,6 +20,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 312,
         "segment": "compact SUV",
         "teambhp_search": "Nexon EV Max ownership review",
+        "markets": ["india"],
     },
     "Tata Nexon EV": {
         "real_range_city_km": 150,
@@ -33,6 +34,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 250,
         "segment": "compact SUV",
         "teambhp_search": "Nexon EV ownership review India",
+        "markets": ["india"],
     },
     "Tata Tiago EV": {
         "real_range_city_km": 200,
@@ -46,6 +48,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 315,
         "segment": "hatchback",
         "teambhp_search": "Tata Tiago EV ownership review",
+        "markets": ["india"],
     },
     "MG ZS EV": {
         "real_range_city_km": 280,
@@ -59,6 +62,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 461,
         "segment": "mid-size SUV",
         "teambhp_search": "MG ZS EV ownership review India",
+        "markets": ["global"],
     },
     "MG Windsor EV": {
         "real_range_city_km": 270,
@@ -72,6 +76,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 332,
         "segment": "crossover",
         "teambhp_search": "MG Windsor EV ownership review",
+        "markets": ["india"],
     },
     "Hyundai Ioniq 5": {
         "real_range_city_km": 380,
@@ -85,6 +90,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 631,
         "segment": "premium crossover",
         "teambhp_search": "Hyundai Ioniq 5 ownership India review",
+        "markets": ["global"],
     },
     "Hyundai Creta Electric": {
         "real_range_city_km": 400,
@@ -98,6 +104,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 473,
         "segment": "compact SUV",
         "teambhp_search": "Hyundai Creta Electric ownership India",
+        "markets": ["india"],
     },
     "Kia EV6": {
         "real_range_city_km": 350,
@@ -111,6 +118,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 528,
         "segment": "premium crossover",
         "teambhp_search": "Kia EV6 ownership review India",
+        "markets": ["global"],
     },
     "BYD Atto 3": {
         "real_range_city_km": 360,
@@ -124,6 +132,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 521,
         "segment": "mid-size SUV",
         "teambhp_search": "BYD Atto 3 ownership review India",
+        "markets": ["global"],
     },
     "Mahindra BE 6": {
         "real_range_city_km": 450,
@@ -137,6 +146,7 @@ CAR_PROFILES: dict[str, dict] = {
         "manufacturer_range_claim_km": 682,
         "segment": "electric SUV",
         "teambhp_search": "Mahindra BE 6 ownership review",
+        "markets": ["india"],
     },
 }
 
@@ -147,3 +157,12 @@ CAR_MODEL_LIST = list(CAR_PROFILES.keys())
 def get_profile(car_model: str) -> dict:
     """Return car profile, falling back to Nexon EV Max if unknown."""
     return CAR_PROFILES.get(car_model, CAR_PROFILES["Tata Nexon EV Max"])
+
+
+def get_models_for_country(country: str) -> list[str]:
+    """Return car models available for a given country.
+    India gets all models; all other markets get only 'global' models.
+    """
+    if country.lower() == "india":
+        return CAR_MODEL_LIST
+    return [name for name, p in CAR_PROFILES.items() if "global" in p.get("markets", [])]
