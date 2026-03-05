@@ -4,12 +4,15 @@ The complete pipeline: load all data → score → prompt → verdict
 """
 
 import json
+import logging
 import math
 import os
 import requests
 from pathlib import Path
 
 from car_profiles import CAR_PROFILES, get_profile
+
+logger = logging.getLogger("evmitra")
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -31,10 +34,10 @@ def load_json(filename):
         with open(file_path, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
-        print(f"⚠️  {filename} not found — using empty dict")
+        logger.warning("%s not found — using empty dict", filename)
         return {}
     except json.JSONDecodeError as e:
-        print(f"⚠️  {filename} has bad JSON: {e}")
+        logger.warning("%s has bad JSON: %s", filename, e)
         return {}
 
 
@@ -50,13 +53,14 @@ def load_all_data():
         "ocm_nagpur":       load_json("ocm_nagpur.json"),
     }
 
-    print("\n📂 Data files loaded:")
     for name, content in data.items():
-        status = "✅" if content else "⚠️  empty"
-        count = ""
-        if isinstance(content, dict) and "stations" in content:
-            count = f"({content.get('total_found', len(content['stations']))} stations)"
-        print(f"   {status} {name} {count}")
+        if content:
+            extra = ""
+            if isinstance(content, dict) and "stations" in content:
+                extra = f" ({content.get('total_found', len(content['stations']))} stations)"
+            logger.info("  loaded %s%s", name, extra)
+        else:
+            logger.warning("  empty %s", name)
 
     return data
 
@@ -427,12 +431,12 @@ def call_llm(prompt):
                 max_tokens=800,
                 messages=[{"role": "user", "content": prompt}]
             )
-            print("✅ Used Anthropic Claude")
+            logger.info("LLM: Anthropic Claude")
             return msg.content[0].text
         except ImportError:
-            print("⚠️  anthropic package not installed — pip install anthropic")
+            logger.warning("anthropic package not installed — pip install anthropic")
         except Exception as e:
-            print(f"⚠️  Anthropic failed: {e}")
+            logger.warning("Anthropic failed: %s", e)
 
     fireworks_key = os.environ.get("FIREWORKS_API_KEY")
     if fireworks_key:
@@ -444,19 +448,23 @@ def call_llm(prompt):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "accounts/fireworks/models/llama-v3p1-8b-instruct",
+                    "model": "accounts/fireworks/models/llama-v3p3-70b-instruct",
                     "messages": [{"role": "user", "content": prompt}],
                     "max_tokens": 800,
                     "temperature": 0.3,
                 },
                 timeout=30,
             )
-            print("✅ Used Fireworks.ai (LLaMA 3.1)")
-            return resp.json()["choices"][0]["message"]["content"]
+            data = resp.json()
+            if "choices" not in data:
+                logger.warning("Fireworks non-chat response: %s", str(data)[:300])
+                return None
+            logger.info("LLM: Fireworks.ai (LLaMA 3.1)")
+            return data["choices"][0]["message"]["content"]
         except Exception as e:
-            print(f"⚠️  Fireworks failed: {e}")
+            logger.warning("Fireworks failed: %s", e)
 
-    print("❌ No LLM API key found. Set ANTHROPIC_API_KEY or FIREWORKS_API_KEY.")
+    logger.error("No LLM API key found. Set ANTHROPIC_API_KEY or FIREWORKS_API_KEY.")
     return None
 
 

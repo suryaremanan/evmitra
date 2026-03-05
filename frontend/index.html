@@ -2315,7 +2315,33 @@
                         try { event = JSON.parse(line.slice(6)); }
                         catch (e) { continue; }
 
-                        const { type, message, data } = event;
+                        const { type, message, status, data } = event;
+
+                        if (type === 'done') {
+                            if (status === 'complete') {
+                                // Success — hide spinner, show success state
+                                document.querySelectorAll('.loading-step').forEach(s => {
+                                    s.className = 'loading-step done';
+                                    s.querySelector('.step-icon').textContent = '✓';
+                                });
+                                document.getElementById('progressFill').style.width = '100%';
+                                document.getElementById('loadingTitle').textContent = 'Analysis complete!';
+                            } else {
+                                // Error — show actionable error card
+                                const errorCard = document.getElementById('errorCard');
+                                const errMsg = event.reason || message || 'Analysis could not be completed';
+                                const isKeyError = errMsg.toLowerCase().includes('api key') || errMsg.toLowerCase().includes('key');
+                                errorCard.innerHTML = isKeyError
+                                    ? '⚠️  API key missing or invalid. Ask the admin to set ANTHROPIC_API_KEY or FIREWORKS_API_KEY in .env'
+                                    : '⚠️  Service temporarily unavailable. Please try again in a few moments.';
+                                errorCard.style.display = 'block';
+                                document.getElementById('loading').style.display = 'none';
+                                document.getElementById('formSection').style.display = 'block';
+                                document.getElementById('submitBtn').disabled = false;
+                                return;
+                            }
+                            continue;
+                        }
 
                         if (type === 'COMPLETE') {
                             // Update city cache badge
@@ -2323,12 +2349,6 @@
                                 cityCache[city] = { cached: true, fresh: true, age_min: 0, stations: data.scores?.total_stations || 0 };
                                 updateCityBadge();
                             }
-                            // Finish all steps
-                            document.querySelectorAll('.loading-step').forEach(s => {
-                                s.className = 'loading-step done';
-                                s.querySelector('.step-icon').textContent = '✓';
-                            });
-                            document.getElementById('progressFill').style.width = '100%';
                             appendLog('Verdict ready ✓', 'COMPLETE');
                             setTimeout(() => {
                                 document.getElementById('loading').style.display = 'none';
@@ -2337,7 +2357,9 @@
                             return;
 
                         } else if (type === 'ERROR') {
-                            throw new Error(message || 'Backend error');
+                            appendLog(message || 'Backend error', 'ERROR');
+                            // Don't throw — wait for the done event to handle UI
+                            continue;
 
                         } else {
                             // Progress events
@@ -2443,7 +2465,12 @@
                     for (const line of lines) {
                         if (!line.startsWith('data: ')) continue;
                         const evt = JSON.parse(line.slice(6));
-                        if (evt.type === 'SCANNING') {
+                        if (evt.type === 'done') {
+                            if (evt.status !== 'complete') {
+                                throw new Error(evt.reason || 'Charger scan could not be completed. Service temporarily unavailable.');
+                            }
+                            continue;
+                        } else if (evt.type === 'SCANNING') {
                             logEl.textContent = evt.message;
                         } else if (evt.type === 'NETWORK_DONE') {
                             logEl.textContent += `\n✅ ${evt.network}: ${evt.stations_found} stations found`;
@@ -2714,7 +2741,14 @@
                         let event;
                         try { event = JSON.parse(line.slice(6)); } catch { continue; }
 
-                        const { type, message, data } = event;
+                        const { type, message, status, data } = event;
+
+                        if (type === 'done') {
+                            if (status !== 'complete') {
+                                throw new Error(event.reason || 'Route planning failed. Service temporarily unavailable.');
+                            }
+                            continue;
+                        }
 
                         if (type === 'COMPLETE') {
                             appendRouteLog('Route plan ready ✓', 'STOP_FOUND');
@@ -2725,7 +2759,8 @@
                             }, 400);
                             return;
                         } else if (type === 'ERROR') {
-                            throw new Error(message || 'Route planning failed');
+                            appendRouteLog(message || 'Route planning error', 'ERROR');
+                            continue;
                         } else if (message) {
                             appendRouteLog(message, type);
                         }
