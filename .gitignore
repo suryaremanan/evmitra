@@ -17,3 +17,10 @@ env/
 # OS/editor artifacts
 .DS_Store
 .vscode/
+
+# Node / Next.js
+node_modules/
+.next/
+frontend-next/node_modules/
+frontend-next/.next/
+frontend-next/.next_bak*/
