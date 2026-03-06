@@ -24,3 +24,4 @@ node_modules/
 frontend-next/node_modules/
 frontend-next/.next/
 frontend-next/.next_bak*/
+.env

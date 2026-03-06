@@ -15,6 +15,7 @@ from core.config import TINYFISH_API_KEY, normalize_country, logger
 from core.cache import CHARGER_CACHE, TEAMBHP_CACHE
 from car_profiles import CAR_PROFILES, CAR_MODEL_LIST, get_models_for_country
 from services.tinyfish_service import tinyfish_cb
+from global_config import COUNTRIES, CURRENCIES
 import user_store
 
 router = APIRouter()
@@ -41,6 +42,24 @@ class ProfileRequest(BaseModel):
 
 
 # ── endpoints ──
+
+
+@router.get("/countries")
+def get_countries():
+    result = []
+    for code, c in COUNTRIES.items():
+        currency_code = c.get("currency", "USD")
+        currency_symbol = CURRENCIES.get(currency_code, {}).get("symbol", currency_code)
+        result.append({
+            "code": code,
+            "name": c["name"],
+            "flag": c.get("flag", "🌐"),
+            "currency": currency_code,
+            "currency_symbol": currency_symbol,
+            "cities": c.get("cities", []),
+            "region_label": c.get("region_label", "City"),
+        })
+    return {"countries": result}
 
 
 @router.get("/health")
