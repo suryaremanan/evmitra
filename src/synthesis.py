@@ -453,7 +453,7 @@ def call_llm(prompt):
                     "max_tokens": 800,
                     "temperature": 0.3,
                 },
-                timeout=30,
+                timeout=90,
             )
             data = resp.json()
             if "choices" not in data:

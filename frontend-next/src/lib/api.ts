@@ -9,7 +9,7 @@ export async function fetchCountries() {
 }
 
 export async function fetchEVDatabase(country: string) {
-    const res = await fetch(`${API_URL}/ev-database?country=${country}&live=true`)
+    const res = await fetch(`${API_URL}/ev-database?country=${country}&live=true`, { cache: 'no-store' })
     if (!res.ok) throw new Error('Failed to fetch EV database')
     return res.json()
 }
@@ -23,6 +23,7 @@ export function streamEVDatabase(
     fetch(`${API_URL}/ev-database/stream?country=${encodeURIComponent(country)}&live=true`, {
         method: 'GET',
         signal: controller.signal,
+        cache: 'no-store',
     })
         .then(async (res) => {
             if (!res.ok) {

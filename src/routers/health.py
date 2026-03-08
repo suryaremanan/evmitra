@@ -3,18 +3,21 @@ EV Mitra — routers/health.py
 Operational endpoints: health, debug-keys, cache-status, data-freshness, cars, profile.
 """
 
+import json
 import os
 import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from core.config import TINYFISH_API_KEY, normalize_country, logger
 from core.cache import CHARGER_CACHE, TEAMBHP_CACHE
 from car_profiles import CAR_PROFILES, CAR_MODEL_LIST, get_models_for_country
 from services.tinyfish_service import tinyfish_cb
+from services.ev_model_service import fetch_live_ev_models
 from global_config import COUNTRIES, CURRENCIES
 import user_store
 
@@ -193,6 +196,53 @@ def data_freshness():
         "teambhp": teambhp_info,
         "supported_cars": CAR_MODEL_LIST,
     }
+
+
+@router.get("/ev-database")
+async def ev_database(country: str = "IN"):
+    """Return EV models for the given country from a fresh TinyFish scrape."""
+    c = normalize_country(country)
+    models = await fetch_live_ev_models(c, use_cache=False)
+    if not models:
+        raise HTTPException(status_code=502, detail="TinyFish returned no EV models for this country.")
+    return {"models": models, "source": "live", "count": len(models)}
+
+
+@router.get("/ev-database/stream")
+async def ev_database_stream(country: str = "IN"):
+    """SSE stream: emits COMPLETE only after the TinyFish EV model fetch finishes."""
+    c = normalize_country(country)
+
+    async def generate():
+        try:
+            models = await fetch_live_ev_models(c, use_cache=False)
+        except Exception as exc:
+            logger.warning("ev-database/stream live fetch error: %s", exc)
+            error = json.dumps({
+                "type": "ERROR",
+                "message": "Failed to fetch EV models from TinyFish.",
+            })
+            yield f"data: {error}\n\n"
+            return
+        if not models:
+            error = json.dumps({
+                "type": "ERROR",
+                "message": "TinyFish returned no EV models for this country.",
+            })
+            yield f"data: {error}\n\n"
+            return
+
+        complete = json.dumps({
+            "type": "COMPLETE",
+            "data": {"models": models},
+        })
+        yield f"data: {complete}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/cars")

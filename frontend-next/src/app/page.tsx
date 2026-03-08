@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import {
     Globe2, Zap, MapPin, ChevronDown, Home, Search,
     Loader2, CheckCircle2, AlertCircle, RefreshCw, ArrowRight,
-    Battery, Shield, TrendingDown, Download,
+    Battery, Shield, TrendingDown, Download, FileText,
 } from 'lucide-react'
-import { fetchCountries, fetchEVDatabase, streamEVDatabase, streamVerdict } from '@/lib/api'
+import { fetchCountries, streamEVDatabase, streamVerdict } from '@/lib/api'
 import type { Country, EvModel, VerdictResult, VehicleDetails, ChargerStation, FormState } from '@/lib/types'
 
 // ─────────────────────────────────────────────────────────
@@ -613,6 +613,7 @@ function BatteryArcMini({ kwh, animated }: { kwh: number; animated: boolean }) {
     const pct   = Math.min(1, kwh / 110)
     const fillLen = animated ? halfC * pct : 0
     const color = kwh >= 75 ? '#10b981' : kwh >= 50 ? '#22d3ee' : '#f59e0b'
+    const hasBatteryData = kwh > 0
 
     return (
         <svg width="80" height="46" viewBox="-6 -6 92 52" style={{ overflow: 'visible' }}>
@@ -627,9 +628,9 @@ function BatteryArcMini({ kwh, animated }: { kwh: number; animated: boolean }) {
                 transform="rotate(180 40 44)"
                 style={{ transition: 'stroke-dasharray 1.3s cubic-bezier(0.4,0,0.2,1)', filter: `drop-shadow(0 0 6px ${color}70)` }} />
             <text x="40" y="32" textAnchor="middle" dominantBaseline="middle" fill="white"
-                fontFamily="Space Mono, monospace" fontWeight="bold" fontSize="15">{kwh}</text>
+                fontFamily="Space Mono, monospace" fontWeight="bold" fontSize={hasBatteryData ? "15" : "10"}>{hasBatteryData ? kwh : 'N/A'}</text>
             <text x="40" y="43" textAnchor="middle" dominantBaseline="middle" fill="#475569"
-                fontFamily="monospace" fontSize="7.5">kWh</text>
+                fontFamily="monospace" fontSize="7.5">{hasBatteryData ? 'kWh' : 'unavailable'}</text>
         </svg>
     )
 }
@@ -923,16 +924,6 @@ function VisualizationPanel({ result }: { result: VerdictResult }) {
                                     <div className="min-w-0">
                                         <div className="font-mono text-[11px] text-slate-300 truncate leading-tight">{s.name}</div>
                                         <div className="font-mono text-[10px] text-slate-600 truncate mt-0.5">{s.address}</div>
-                                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                            {s.connector_types.map((ct, j) => (
-                                                <span key={j} className="font-mono text-[9px] px-1.5 py-0.5 rounded"
-                                                    style={{ background: isDC ? '#10b98115' : '#22d3ee15', color: accentColor, border: `1px solid ${accentColor}25` }}>
-                                                    {ct}
-                                                </span>
-                                            ))}
-                                            {s.connector_types.length === 0 && <span className="font-mono text-[9px] text-slate-700">AC</span>}
-                                            {s.power_kw > 0 && <span className="font-mono text-[9px] text-slate-600">{s.power_kw}kW</span>}
-                                        </div>
                                     </div>
                                 </div>
                             )
@@ -1107,33 +1098,11 @@ function VehicleSpecsPanel({ result }: { result: VerdictResult }) {
 
 function ResultDashboard({ result, onReset }: { result: VerdictResult; onReset: () => void }) {
     const { scores } = result
-
-    // Parse verdict sections by emoji markers
-    const markers = [
-        { emoji: '🔋', title: 'Charging Anxiety Score', key: 'score' },
-        { emoji: '📊', title: 'What Real Owners Experience', key: 'owners' },
-        { emoji: '⚠️', title: 'Things Nobody Tells You', key: 'warnings' },
-        { emoji: '💚', title: "What's Genuinely Great", key: 'great' },
-        { emoji: '💰', title: 'Your Actual Numbers', key: 'numbers' },
-        { emoji: '🎯', title: 'Honest Verdict', key: 'verdict' },
-    ]
-
-    type Section = { icon: string; title: string; content: string; key: string }
-    const sections: Section[] = []
-    let remaining = result.verdict.trim()
-
-    for (let i = 0; i < markers.length; i++) {
-        const m = markers[i], nextM = markers[i + 1]
-        const startIdx = remaining.indexOf(m.emoji)
-        if (startIdx === -1) continue
-        const endIdx = nextM ? remaining.indexOf(nextM.emoji, startIdx + 1) : -1
-        const content = endIdx > -1
-            ? remaining.slice(startIdx + m.emoji.length, endIdx).trim()
-            : remaining.slice(startIdx + m.emoji.length).trim()
-        sections.push({ icon: m.emoji, title: m.title, content, key: m.key })
-    }
-
-    const sm = Object.fromEntries(sections.map(s => [s.key, s]))
+    const vehicle = result.vehicle_details
+    const stations = result.stations || []
+    const showrooms = vehicle?.showrooms || []
+    const distributors = vehicle?.distributors || []
+    const reviewBreakdown = result.review_breakdown || { good: [], bad: [], ugly: [] }
 
     const handlePDF = () => {
         const prev = document.title
@@ -1142,9 +1111,20 @@ function ResultDashboard({ result, onReset }: { result: VerdictResult; onReset: 
         setTimeout(() => { document.title = prev }, 1500)
     }
 
+    const handleTextReport = () => {
+        const blob = new Blob([result.text_report || result.owner_review || result.verdict], { type: 'text/plain;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `${result.car.replace(/\s+/g, '_').toLowerCase()}_${result.city.toLowerCase()}_report.txt`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(url)
+    }
+
     return (
         <div className="print-page space-y-4">
-            {/* Print-only header (hidden on screen) */}
             <div className="print-only hidden border-b-2 border-gray-300 pb-4 mb-6">
                 <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '24pt', fontWeight: 800 }}>
                     VoltSage — EV Analysis Report
@@ -1154,11 +1134,10 @@ function ResultDashboard({ result, onReset }: { result: VerdictResult; onReset: 
                 </div>
             </div>
 
-            {/* Dashboard header */}
             <div className="flex items-start justify-between gap-4 no-print-layout">
                 <div>
                     <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#22d3ee] mb-1.5">
-                        Analysis Complete
+                        Live Verdict Data
                     </div>
                     <h2
                         className="text-2xl text-white tracking-tight leading-tight"
@@ -1174,6 +1153,14 @@ function ResultDashboard({ result, onReset }: { result: VerdictResult; onReset: 
                     </div>
                 </div>
                 <div className="no-print flex items-center gap-2 flex-shrink-0">
+                    <button
+                        onClick={handleTextReport}
+                        className="flex items-center gap-1.5 px-3 py-2 font-mono text-[11px] text-slate-400 border border-[#1e2d42] hover:text-[#10b981] hover:border-[#10b981]/40 transition-colors"
+                        title="Download text report"
+                    >
+                        <FileText size={12} />
+                        TXT
+                    </button>
                     <button
                         onClick={handlePDF}
                         className="flex items-center gap-1.5 px-3 py-2 font-mono text-[11px] text-slate-400 border border-[#1e2d42] hover:text-[#22d3ee] hover:border-[#22d3ee]/40 transition-colors"
@@ -1192,139 +1179,179 @@ function ResultDashboard({ result, onReset }: { result: VerdictResult; onReset: 
                 </div>
             </div>
 
-            {/* ── Score Gauges ── */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <CircularGauge
                     score={scores.daily_score}
-                    label="Daily Commute"
+                    label="Daily Commute Anxiety"
                     rationale={scores.daily_rationale}
-                    delay={0}
                 />
                 <CircularGauge
                     score={scores.occasional_score}
-                    label="Long Trips"
+                    label="Long Trip Anxiety"
                     rationale={scores.occasional_rationale}
                     delay={180}
                 />
             </div>
 
-            {/* ── Stats strip ── */}
-            <div className="grid grid-cols-3 gap-3">
-                {[
-                    { label: 'Total Stations', value: scores.total_stations, icon: Battery, color: '#22d3ee', delay: 100 },
-                    { label: 'DC Fast Chargers', value: scores.fast_dc_chargers, icon: Zap, color: '#10b981', delay: 180 },
-                    { label: '50kW+ Rapid', value: scores.high_power_chargers_50kw_plus, icon: TrendingDown, color: '#f59e0b', delay: 260 },
-                ].map((stat) => {
-                    const Icon = stat.icon
-                    return (
-                        <div
-                            key={stat.label}
-                            className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4 text-center animate-fade-up"
-                            style={{ animationDelay: `${stat.delay}ms` }}
-                        >
-                            <Icon size={14} className="mx-auto mb-2.5" style={{ color: stat.color }} />
-                            <div
-                                className="text-[32px] font-bold tabular-nums leading-none"
-                                style={{ color: stat.color, fontFamily: "'Space Mono', monospace" }}
-                            >
-                                <AnimatedCounter value={stat.value} delay={stat.delay + 200} />
-                            </div>
-                            <div className="font-mono text-[10px] text-slate-600 mt-1.5 uppercase tracking-widest leading-tight">
-                                {stat.label}
-                            </div>
-                        </div>
-                    )
-                })}
-            </div>
-
-            {/* ── Visualization Panel ── */}
-            <VisualizationPanel result={result} />
-
-            {/* ── Vehicle Specs Panel ── */}
-            {result.vehicle_details && <VehicleSpecsPanel result={result} />}
-
-            {/* ── Bento verdict grid ── */}
-            {sections.length > 0 ? (
-                <div className="bento-grid grid grid-cols-3 gap-3">
-                    {/* Row 1: Owners (wide) + Warnings (narrow) */}
-                    {sm.owners && (
-                        <BentoCard icon={sm.owners.icon} title={sm.owners.title}
-                            content={sm.owners.content} sectionKey="owners" colSpan={2} delay={80} />
-                    )}
-                    {sm.warnings && (
-                        <BentoCard icon={sm.warnings.icon} title={sm.warnings.title}
-                            content={sm.warnings.content} sectionKey="warnings" colSpan={1} delay={140} />
-                    )}
-
-                    {/* Row 2: What's great (narrow) + Numbers (wide) */}
-                    {sm.great && (
-                        <BentoCard icon={sm.great.icon} title={sm.great.title}
-                            content={sm.great.content} sectionKey="great" colSpan={1} delay={200} />
-                    )}
-                    {sm.numbers && (
-                        <BentoCard icon={sm.numbers.icon} title={sm.numbers.title}
-                            content={sm.numbers.content} sectionKey="numbers" colSpan={2} delay={260} />
-                    )}
-
-                    {/* Row 3: Verdict — full width, special treatment */}
-                    {sm.verdict && (
-                        <div
-                            className="verdict-card col-span-3 bento-item relative bg-[#0d1220] border border-[#22d3ee]/25 rounded-xl p-6 overflow-hidden animate-fade-up"
-                            style={{
-                                animationDelay: '360ms',
-                                background: 'linear-gradient(135deg, rgba(34,211,238,0.07) 0%, rgba(34,211,238,0.02) 40%, transparent 70%)',
-                            }}
-                        >
-                            {/* Background glow */}
-                            <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#22d3ee]/6 blur-3xl pointer-events-none" />
-
-                            <div className="relative z-10">
-                                <div className="flex items-center gap-2.5 mb-4">
-                                    <span className="text-lg leading-none">{sm.verdict.icon}</span>
-                                    <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#22d3ee]">
-                                        Honest Verdict
-                                    </span>
-                                    <div className="flex-1 h-px bg-[#22d3ee]/15 ml-2" />
-                                </div>
-                                <p
-                                    className="text-[17px] text-slate-100 leading-relaxed"
-                                    style={{ fontFamily: "'Outfit', sans-serif", fontStyle: 'italic', fontWeight: 500 }}
-                                >
-                                    {sm.verdict.content}
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            ) : (
-                /* Fallback if no emoji markers in verdict */
-                <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-5">
-                    <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{result.verdict}</p>
-                </div>
-            )}
-
-            {/* ── Incentives ── */}
-            {result.incentives?.headline && (
-                <div
-                    className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4 flex items-start gap-3 animate-fade-up"
-                    style={{ animationDelay: '460ms' }}
-                >
-                    <Shield size={14} className="text-[#22d3ee] mt-0.5 flex-shrink-0" />
-                    <div>
-                        <div className="font-mono text-[10px] tracking-[0.2em] uppercase text-[#22d3ee] mb-1.5">
-                            Government Incentives
-                        </div>
-                        <p className="text-sm text-slate-300">{result.incentives.headline}</p>
-                        <p className="font-mono text-[11px] text-slate-600 mt-1">{result.incentives.source}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4 animate-fade-up">
+                    <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">Charging Stations</div>
+                    <div className="text-3xl font-bold text-[#22d3ee]" style={{ fontFamily: "'Space Mono', monospace" }}>
+                        <AnimatedCounter value={result.charging_station_count ?? stations.length} delay={120} />
                     </div>
                 </div>
-            )}
+                <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4 animate-fade-up" style={{ animationDelay: '100ms' }}>
+                    <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">Battery Capacity</div>
+                    <div className="text-3xl font-bold text-[#10b981]" style={{ fontFamily: "'Space Mono', monospace" }}>
+                        {(vehicle?.battery_kwh ?? 0) > 0 ? (
+                            <>
+                                <AnimatedCounter value={vehicle?.battery_kwh ?? 0} delay={220} />
+                                <span className="text-sm text-slate-500 ml-1">kWh</span>
+                            </>
+                        ) : (
+                            <span className="text-xl text-slate-400">N/A</span>
+                        )}
+                    </div>
+                </div>
+                <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4 animate-fade-up" style={{ animationDelay: '200ms' }}>
+                    <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">Fast DC Chargers</div>
+                    <div className="text-3xl font-bold text-[#f59e0b]" style={{ fontFamily: "'Space Mono', monospace" }}>
+                        <AnimatedCounter value={scores.fast_dc_chargers} delay={320} />
+                    </div>
+                </div>
+                {vehicle?.iot_map_available !== null && vehicle?.iot_map_available !== undefined && (
+                    <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4 animate-fade-up" style={{ animationDelay: '300ms' }}>
+                        <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">IoT Map</div>
+                        <div className="text-lg font-semibold text-slate-200">
+                            {vehicle.iot_map_available ? 'Available' : 'Not available'}
+                        </div>
+                    </div>
+                )}
+            </div>
 
-            {/* ── Sources & Freshness ── */}
-            <div
-                className="grid grid-cols-2 gap-3 animate-fade-up"
-                style={{ animationDelay: '520ms' }}
-            >
+            <VisualizationPanel result={result} />
+
+            {result.vehicle_details && <VehicleSpecsPanel result={result} />}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
+                    <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">Battery Warranty</div>
+                    <p className="text-sm text-slate-300 leading-relaxed">{vehicle?.battery_warranty || 'N/A'}</p>
+                </div>
+                {vehicle?.price_formatted && (
+                    <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
+                        <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">Local Price</div>
+                        <p className="text-sm text-slate-300 leading-relaxed">{vehicle.price_formatted}</p>
+                    </div>
+                )}
+                {(result.cost_analysis || vehicle?.cost_analysis) && (
+                    <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
+                        <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">Cost Analysis</div>
+                        <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{result.cost_analysis || vehicle?.cost_analysis}</p>
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <BentoCard
+                    icon="💚"
+                    title="The Good"
+                    content={(reviewBreakdown.good || []).join('\n')}
+                    sectionKey="great"
+                    delay={90}
+                />
+                <BentoCard
+                    icon="⚠️"
+                    title="The Bad"
+                    content={(reviewBreakdown.bad || []).join('\n')}
+                    sectionKey="warnings"
+                    delay={150}
+                />
+                <BentoCard
+                    icon="☠"
+                    title="The Ugly"
+                    content={(reviewBreakdown.ugly || []).join('\n')}
+                    sectionKey="warnings"
+                    delay={210}
+                />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
+                    <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-[#22d3ee] mb-3">
+                        Charging Stations · {result.city}
+                    </div>
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                        {stations.map((station, index) => (
+                            <div key={`${station.name}-${index}`} className="border border-[#1e2d42] rounded-lg p-3 bg-[#070910]">
+                                <div className="font-mono text-[11px] text-slate-300">{station.name}</div>
+                                <div className="font-mono text-[10px] text-slate-500 mt-1">{station.address}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
+                        <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-[#22d3ee] mb-3">
+                            Honest Customer Review
+                        </div>
+                        <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {result.owner_review || result.verdict}
+                        </p>
+                        {(result.review_sources?.length ?? 0) > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-1.5">
+                                {result.review_sources!.map((source, index) => (
+                                    <span key={`${source}-${index}`} className="font-mono text-[10px] px-2 py-0.5 border border-[#1e2d42] text-slate-500">
+                                        {source}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
+                        <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-[#22d3ee] mb-3">
+                            Text Report
+                        </div>
+                        <pre className="text-[11px] text-slate-300 leading-relaxed whitespace-pre-wrap font-mono max-h-72 overflow-y-auto pr-2">
+                            {result.text_report || result.owner_review || result.verdict}
+                        </pre>
+                    </div>
+
+                    <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
+                        <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-[#22d3ee] mb-3">
+                            Showrooms · {result.city}
+                        </div>
+                        <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                            {showrooms.map((row, index) => (
+                                <div key={`${row.name}-${index}`} className="border border-[#1e2d42] rounded-lg p-3 bg-[#070910]">
+                                    <div className="font-mono text-[11px] text-slate-300">{row.name}</div>
+                                    <div className="font-mono text-[10px] text-slate-500 mt-1">{row.address}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {distributors.length > 0 && (
+                        <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
+                            <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-[#22d3ee] mb-3">
+                                Distributors · {result.city}
+                            </div>
+                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                {distributors.map((row, index) => (
+                                    <div key={`${row.name}-${index}`} className="border border-[#1e2d42] rounded-lg p-3 bg-[#070910]">
+                                        <div className="font-mono text-[11px] text-slate-300">{row.name}</div>
+                                        <div className="font-mono text-[10px] text-slate-500 mt-1">{row.address}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 animate-fade-up">
                 <div className="bento-item bg-[#0d1220] border border-[#1e2d42] rounded-xl p-4">
                     <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">Data Sources</div>
                     <div className="flex flex-wrap gap-1.5">
@@ -1339,7 +1366,7 @@ function ResultDashboard({ result, onReset }: { result: VerdictResult; onReset: 
                     <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">Data Freshness</div>
                     <div className="space-y-0.5 font-mono text-[11px] text-slate-500">
                         <div>Chargers: {result.data_freshness.chargers.source_type} · {result.data_freshness.chargers.fetched_at ? new Date(result.data_freshness.chargers.fetched_at).toLocaleTimeString() : 'N/A'}</div>
-                        <div>Reviews: {result.data_freshness.owner_reviews.source_type} · TinyFish</div>
+                        <div>Reviews: {result.data_freshness.owner_reviews.source_type} · {result.data_freshness.owner_reviews.fetched_at ? new Date(result.data_freshness.owner_reviews.fetched_at).toLocaleTimeString() : 'N/A'}</div>
                     </div>
                 </div>
             </div>
@@ -1353,10 +1380,10 @@ function ResultDashboard({ result, onReset }: { result: VerdictResult; onReset: 
 
 const INITIAL_STEPS = [
     { id: 'chargers', label: 'Scraping live charging stations',          status: 'pending' as const },
-    { id: 'owners',   label: 'Reading owner forum reviews',              status: 'pending' as const },
-    { id: 'specs',    label: 'Fetching local prices & showrooms',        status: 'pending' as const },
+    { id: 'specs',    label: 'Scraping city sellers and vehicle specs',  status: 'pending' as const },
+    { id: 'owners',   label: 'Reading Reddit and EV forum reviews',      status: 'pending' as const },
     { id: 'scoring',  label: 'Calculating anxiety scores',               status: 'pending' as const },
-    { id: 'llm',      label: 'Synthesising honest verdict (AI)',         status: 'pending' as const },
+    { id: 'report',   label: 'Assembling report and dashboard',          status: 'pending' as const },
 ]
 
 export default function HomePage() {
@@ -1365,6 +1392,7 @@ export default function HomePage() {
     const [evModels, setEvModels]               = useState<EvModel[]>([])
     const [loadingCountries, setLoadingCountries] = useState(true)
     const [loadingModels, setLoadingModels]     = useState(false)
+    const [liveFetching, setLiveFetching]       = useState(false)
     const [form, setForm]                       = useState<FormState>({
         country: '', city: '',
         carModel: '',
@@ -1388,59 +1416,49 @@ export default function HomePage() {
 
     useEffect(() => {
         if (!form.country) return
+        setError(null)
         setLoadingModels(true)
+        setLiveFetching(true)
         setEvModels([])
-        let streamClosed = false
-        let gotAnyModels = false
-        let didLiveFetchAfterStream = false
+        let finished = false
 
-        const runLiveFetchIfNeeded = () => {
-            if (didLiveFetchAfterStream || gotAnyModels) return
-            didLiveFetchAfterStream = true
-            fetchEVDatabase(form.country)
-                .then(resp => {
-                    const liveModels = (resp.models || []) as EvModel[]
-                    if (liveModels.length > 0) {
-                        gotAnyModels = true
-                        setEvModels(liveModels)
-                        setForm(prev => {
-                            const hasCurrent = liveModels.some(m => m.name === prev.carModel)
-                            if (hasCurrent) return prev
-                            return { ...prev, carModel: liveModels[0].name }
-                        })
-                    }
-                })
-                .finally(() => setLoadingModels(false))
+        const applyModels = (models: EvModel[]) => {
+            if (!models.length) return
+            setEvModels(models)
+            setForm(prev => {
+                const hasCurrent = models.some(m => m.name === prev.carModel)
+                if (hasCurrent) return prev
+                return { ...prev, carModel: models[0].name }
+            })
         }
 
         const cleanup = streamEVDatabase(form.country, (event) => {
-            if (event.type === 'MODELS_PARTIAL' || event.type === 'COMPLETE') {
-                const data = event.data as { models?: EvModel[]; data?: { models?: EvModel[] } } | undefined
-                const models = data?.models || data?.data?.models || []
-                if (models.length > 0) {
-                    gotAnyModels = true
-                    setEvModels(models)
-                }
-                setForm(prev => {
-                    if (!models.length) return prev
-                    const hasCurrent = models.some(m => m.name === prev.carModel)
-                    if (hasCurrent) return prev
-                    return { ...prev, carModel: models[0].name }
-                })
-                if (event.type === 'COMPLETE') {
-                    setLoadingModels(false)
-                    if (!gotAnyModels && streamClosed) runLiveFetchIfNeeded()
+            if (event.type === 'COMPLETE') {
+                finished = true
+                const data = event.data as { models?: EvModel[] } | undefined
+                const models = data?.models || []
+                applyModels(models)
+                setLoadingModels(false)
+                setLiveFetching(false)
+                if (models.length === 0) {
+                    setError('TinyFish completed without returning any EV models for this country.')
                 }
             } else if (event.type === 'ERROR') {
-                runLiveFetchIfNeeded()
-            } else if (event.type === 'STREAM_CLOSED') {
-                streamClosed = true
-                if (!gotAnyModels) runLiveFetchIfNeeded()
+                finished = true
+                setError(event.message || 'Failed to fetch EV models from TinyFish.')
+                setLiveFetching(false)
+                setLoadingModels(false)
+            } else if (event.type === 'STREAM_CLOSED' && !finished) {
+                setError('TinyFish model fetch ended before completion.')
+                setLiveFetching(false)
+                setLoadingModels(false)
             }
         })
         return () => {
+            finished = true
             cleanup()
             setLoadingModels(false)
+            setLiveFetching(false)
         }
     }, [form.country])
 
@@ -1475,12 +1493,12 @@ export default function HomePage() {
                     case 'SCRAPING_SPECS':    updateStep('specs',    'active', event.message); break
                     case 'SPECS_DONE':        updateStep('specs',    'done',   event.message); break
                     case 'SCORING':           updateStep('scoring',  'active', event.message); break
-                    case 'LLM':
+                    case 'REPORT':
                         updateStep('scoring', 'done')
-                        updateStep('llm', 'active', event.message)
+                        updateStep('report', 'active', event.message)
                         break
                     case 'COMPLETE':
-                        updateStep('llm', 'done')
+                        updateStep('report', 'done')
                         setResult(event.data as VerdictResult)
                         setIsStreaming(false)
                         break
@@ -1578,7 +1596,13 @@ export default function HomePage() {
                                 {/* EV Model */}
                                 <div>
                                     <div className="font-mono text-[10px] tracking-[0.18em] uppercase text-slate-600 mb-2">
-                                        EV Model {loadingModels && <Loader2 size={10} className="inline animate-spin ml-1" />}
+                                        EV Model{' '}
+                                        {loadingModels
+                                            ? <Loader2 size={10} className="inline animate-spin ml-1" />
+                                            : liveFetching
+                                                ? <span className="text-[#22d3ee]/60 normal-case tracking-normal font-sans ml-1">fetching live data…</span>
+                                                : null
+                                        }
                                     </div>
                                     <select
                                         id="car-select"

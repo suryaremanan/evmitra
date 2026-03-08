@@ -54,6 +54,8 @@ export interface VehicleDetails {
     iot_map_available: boolean | null
     showrooms: { name: string; address: string }[]
     distributors: { name: string; address: string }[]
+    cost_analysis?: string | null
+    source_type?: string
 }
 
 export interface VerdictResult {
@@ -65,7 +67,17 @@ export interface VerdictResult {
     daily_km: number
     occasional_km: number
     scores: AnxietyScores
+    charging_station_count?: number
     stations: ChargerStation[]
+    owner_review?: string
+    review_sources?: string[]
+    review_breakdown?: {
+        good: string[]
+        bad: string[]
+        ugly: string[]
+    }
+    cost_analysis?: string | null
+    text_report?: string
     verdict: string
     data_freshness: {
         chargers: { source_type: string; fetched_at: string | null }
@@ -84,7 +96,7 @@ export type SseEventType =
     | 'SCRAPING_SPECS'
     | 'SPECS_DONE'
     | 'SCORING'
-    | 'LLM'
+    | 'REPORT'
     | 'COMPLETE'
     | 'ERROR'
 

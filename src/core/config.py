@@ -34,8 +34,8 @@ CACHE_TTL_SECONDS = int(os.environ.get("CACHE_TTL_SECONDS", "3600"))
 TINYFISH_DEFAULT_TIMEOUT = int(os.environ.get("TINYFISH_DEFAULT_TIMEOUT", "120"))
 QUICK_MODE_DEADLINE_SEC = int(os.environ.get("QUICK_MODE_DEADLINE_SEC", "3"))
 WARMUP_DEADLINE_SEC = int(os.environ.get("WARMUP_DEADLINE_SEC", "12"))
-SSE_QUEUE_TIMEOUT_SEC = int(os.environ.get("SSE_QUEUE_TIMEOUT_SEC", "30"))
-THREAD_JOIN_TIMEOUT_SEC = int(os.environ.get("THREAD_JOIN_TIMEOUT_SEC", "5"))
+SSE_QUEUE_TIMEOUT_SEC = int(os.environ.get("SSE_QUEUE_TIMEOUT_SEC", "180"))
+THREAD_JOIN_TIMEOUT_SEC = int(os.environ.get("THREAD_JOIN_TIMEOUT_SEC", "10"))
 
 # ── Circuit Breaker ──
 CIRCUIT_BREAKER_THRESHOLD = int(os.environ.get("CB_THRESHOLD", "3"))

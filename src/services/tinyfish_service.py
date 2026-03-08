@@ -5,6 +5,7 @@ TinyFish API client with circuit breaker and parallel fan-out.
 
 import asyncio
 import json
+from typing import Optional
 
 import requests as req
 
@@ -15,9 +16,15 @@ from core.circuit_breaker import CircuitBreaker
 tinyfish_cb = CircuitBreaker(name="tinyfish")
 
 
-def tinyfish_call(url: str, goal: str, profile: str = "lite", timeout: int = TINYFISH_DEFAULT_TIMEOUT) -> dict:
+def tinyfish_call(
+    url: str,
+    goal: str,
+    profile: str = "lite",
+    timeout: Optional[int] = TINYFISH_DEFAULT_TIMEOUT,
+    respect_circuit_breaker: bool = True,
+) -> dict:
     """Single TinyFish SSE call — returns parsed result or empty dict on failure."""
-    if tinyfish_cb.is_open:
+    if respect_circuit_breaker and tinyfish_cb.is_open:
         return {}
     try:
         with req.post(
@@ -77,7 +84,8 @@ def tinyfish_call(url: str, goal: str, profile: str = "lite", timeout: int = TIN
 async def parallel_tinyfish_sources(
     sources: list[dict],
     goal_builder,
-    timeout_per_source: int,
+    timeout_per_source: Optional[int],
+    respect_circuit_breaker: bool = True,
 ) -> list[tuple[dict, dict]]:
     """Fan-out multiple TinyFish calls in parallel. Returns [(source, result), ...]."""
     async def one(source: dict):
@@ -87,6 +95,7 @@ async def parallel_tinyfish_sources(
             goal_builder(source["name"]),
             source.get("profile", "lite"),
             timeout_per_source,
+            respect_circuit_breaker,
         )
         return source, result if isinstance(result, dict) else {}
 
