@@ -1,8 +1,16 @@
 // VoltSage — API client
 
-const API_URL =
-    process.env.NEXT_PUBLIC_API_URL ||
-    (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '/api')
+const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim()
+const isProd = process.env.NODE_ENV === 'production'
+const isLocalhostTarget = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(rawApiUrl)
+
+let API_URL = 'http://localhost:8080'
+
+if (isProd) {
+    API_URL = rawApiUrl && !isLocalhostTarget ? rawApiUrl : '/api'
+} else if (rawApiUrl) {
+    API_URL = rawApiUrl
+}
 
 export async function fetchCountries() {
     const res = await fetch(`${API_URL}/countries`)

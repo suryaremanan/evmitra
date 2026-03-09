@@ -1,5 +1,5 @@
 const path = require('node:path')
-const backendApiUrl = (process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
+const backendApiUrl = (process.env.BACKEND_API_URL || '').replace(/\/$/, '')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
