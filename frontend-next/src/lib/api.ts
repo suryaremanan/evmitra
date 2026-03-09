@@ -2,12 +2,11 @@
 
 const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim()
 const isProd = process.env.NODE_ENV === 'production'
-const isLocalhostTarget = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(rawApiUrl)
 
 let API_URL = 'http://localhost:8080'
 
 if (isProd) {
-    API_URL = rawApiUrl && !isLocalhostTarget ? rawApiUrl : '/api'
+    API_URL = '/api'
 } else if (rawApiUrl) {
     API_URL = rawApiUrl
 }
