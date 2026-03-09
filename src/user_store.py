@@ -7,16 +7,25 @@ No authentication — MVP-grade privacy.
 """
 
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent if (BASE_DIR.parent / "data").exists() else BASE_DIR
-DB_PATH = PROJECT_ROOT / "ev_mitra_users.db"
+
+# Vercel filesystem is read-only except /tmp. Allow explicit override for other hosts.
+if os.environ.get("EV_MITRA_DB_PATH"):
+    DB_PATH = Path(os.environ["EV_MITRA_DB_PATH"]).expanduser().resolve()
+elif os.environ.get("VERCEL"):
+    DB_PATH = Path("/tmp/ev_mitra_users.db")
+else:
+    DB_PATH = PROJECT_ROOT / "ev_mitra_users.db"
 
 
 def _conn() -> sqlite3.Connection:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     return con

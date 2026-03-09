@@ -1,10 +1,20 @@
-const path = require('path')
+const path = require('node:path')
+const backendApiUrl = (process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     outputFileTracingRoot: path.join(__dirname),
-    env: {
-        NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
+    async rewrites() {
+        if (!backendApiUrl) {
+            return []
+        }
+
+        return [
+            {
+                source: '/api/:path*',
+                destination: `${backendApiUrl}/:path*`,
+            },
+        ]
     },
 }
 

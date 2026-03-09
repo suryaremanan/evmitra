@@ -166,12 +166,13 @@ def _fetch_missing_vehicle_specs(city: str, country: str, car_model: str, missin
     goal = f"""Find the missing live product specs for the {car_model} sold in {country.title()}.
 Return JSON exactly like this:
 {{
-{",\n".join(template_lines)}
+{",/n".join(template_lines)}
 }}
 Only include these fields: {", ".join(missing_fields)}.
 Use the battery capacity in kWh and charging power in kW when available.
 For any requested field you cannot confirm, return the default shown above.
-Do not include any extra fields."""
+Do not include any extra fields.
+"""
 
     async def run():
         return await parallel_tinyfish_sources(sources, lambda _network: goal, None, False)

@@ -1,6 +1,8 @@
 // VoltSage — API client
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+const API_URL =
+    process.env.NEXT_PUBLIC_API_URL ||
+    (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : '/api')
 
 export async function fetchCountries() {
     const res = await fetch(`${API_URL}/countries`)
@@ -54,11 +56,11 @@ export function streamEVDatabase(
             }
         })
         .catch((err) => {
-            if (err.name !== 'AbortError') {
-                onEvent({ type: 'ERROR', message: err.message })
-            } else {
+            if (err.name === 'AbortError') {
                 onEvent({ type: 'STREAM_CLOSED' })
+                return
             }
+            onEvent({ type: 'ERROR', message: err.message })
         })
 
     return () => controller.abort()
@@ -111,9 +113,10 @@ export function streamVerdict(
             }
         })
         .catch((err) => {
-            if (err.name !== 'AbortError') {
-                onEvent({ type: 'ERROR', message: err.message })
+            if (err.name === 'AbortError') {
+                return
             }
+            onEvent({ type: 'ERROR', message: err.message })
         })
 
     return () => controller.abort()
