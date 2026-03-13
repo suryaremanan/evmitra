@@ -7,7 +7,7 @@ import {
     Battery, Shield, TrendingDown, Download, FileText,
 } from 'lucide-react'
 import Link from 'next/link'
-import { fetchCountries, streamEVDatabase, streamVerdict } from '@/lib/api'
+import { API_URL, fetchCountries, streamEVDatabase, streamVerdict } from '@/lib/api'
 import type { Country, EvModel, VerdictResult, VehicleDetails, ChargerStation, FormState } from '@/lib/types'
 
 // ─────────────────────────────────────────────────────────
@@ -1724,7 +1724,7 @@ export default function HomePage() {
                             <div className="text-sm font-semibold text-[#f43f5e]">Connection error</div>
                             <p className="text-sm text-[#f43f5e]/70 mt-1">{error}</p>
                             <p className="font-mono text-[11px] text-slate-600 mt-2">
-                                Backend: <span className="text-slate-400">http://localhost:8080</span>
+                                Backend: <span className="text-slate-400">{API_URL}</span>
                             </p>
                         </div>
                     </div>

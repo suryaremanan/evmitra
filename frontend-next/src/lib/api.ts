@@ -3,7 +3,7 @@
 const rawApiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim()
 const isProd = process.env.NODE_ENV === 'production'
 
-let API_URL = 'http://localhost:8080'
+export let API_URL = 'http://localhost:8080'
 
 if (isProd) {
     API_URL = '/api'
