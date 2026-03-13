@@ -35,7 +35,7 @@ from services.tinyfish_service import tinyfish_cb
 import user_store
 
 # ── Import routers ──
-from routers import verdict, route, intelligence, chargers, health
+from routers import verdict, route, intelligence, chargers, health, used_ev
 
 # ── Import services that need ALL_DATA injected ──
 from services import charger_service, teambhp_service
@@ -60,6 +60,8 @@ app.include_router(chargers.router)
 logger.info("Router registered: chargers (/chargers/stream)")
 app.include_router(health.router)
 logger.info("Router registered: health (/health, /cache-status, /cars, ...)")
+app.include_router(used_ev.router)
+logger.info("Router registered: used_ev (/used-ev/stream)")
 
 # ── Load static data & inject into modules that need it ──
 logger.info("Loading owner insight data files...")
@@ -70,6 +72,7 @@ charger_service.set_all_data(ALL_DATA)
 teambhp_service.set_all_data(ALL_DATA)
 verdict.set_all_data(ALL_DATA)
 health.set_all_data(ALL_DATA)
+used_ev.set_all_data(ALL_DATA)
 
 user_store.init_db()
 logger.info("User store ready")

@@ -6,6 +6,7 @@ import {
     Loader2, CheckCircle2, AlertCircle, RefreshCw, ArrowRight,
     Battery, Shield, TrendingDown, Download, FileText,
 } from 'lucide-react'
+import Link from 'next/link'
 import { fetchCountries, streamEVDatabase, streamVerdict } from '@/lib/api'
 import type { Country, EvModel, VerdictResult, VehicleDetails, ChargerStation, FormState } from '@/lib/types'
 
@@ -198,7 +199,14 @@ function Header() {
                         </div>
                     </div>
                 </div>
-                <div className="hidden sm:flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-4">
+                    <Link
+                        href="/used-ev"
+                        className="text-xs text-[#8ba3c7] hover:text-white border border-[#1e2d42] hover:border-[#3b82f6] px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+                    >
+                        <Search size={12} />
+                        Used EV Inspect
+                    </Link>
                     <div className="w-1.5 h-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
                     <span className="font-mono text-[11px] text-slate-500 tracking-widest">Live · TinyFish Agent</span>
                 </div>

@@ -128,3 +128,54 @@ export function streamVerdict(
 
     return () => controller.abort()
 }
+
+export function streamUsedEvInvestigation(
+    params: {
+        listing_url: string
+        country: string
+        city?: string
+        vin_hint?: string
+        phone_hint?: string
+    },
+    onEvent: (event: { type: string; message?: string; report?: unknown; elapsed_seconds?: number }) => void
+): () => void {
+    const controller = new AbortController()
+
+    fetch(`${API_URL}/used-ev/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+        signal: controller.signal,
+    })
+        .then(async (res) => {
+            if (!res.ok) {
+                onEvent({ type: 'ERROR', message: `API error: ${res.status}` })
+                return
+            }
+            const reader = res.body?.getReader()
+            if (!reader) return
+            const decoder = new TextDecoder()
+            let buffer = ''
+            while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                buffer += decoder.decode(value, { stream: true })
+                const lines = buffer.split('\n')
+                buffer = lines.pop() ?? ''
+                for (const line of lines) {
+                    const trimmed = line.trim()
+                    if (!trimmed.startsWith('data: ')) continue
+                    try {
+                        const payload = JSON.parse(trimmed.slice(6))
+                        onEvent(payload)
+                    } catch { }
+                }
+            }
+        })
+        .catch((err) => {
+            if (err.name === 'AbortError') return
+            onEvent({ type: 'ERROR', message: err.message })
+        })
+
+    return () => controller.abort()
+}
