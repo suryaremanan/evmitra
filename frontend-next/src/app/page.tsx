@@ -182,7 +182,7 @@ function AnimatedCounter({ value, delay = 0 }: { value: number; delay?: number }
 function Header() {
     return (
         <header className="no-print relative z-20 bg-[#0a0d14]/95 border-b border-[#1e2d42] backdrop-blur-sm">
-            <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <div className="w-9 h-9 border border-[#22d3ee]/40 bg-[#22d3ee]/8 flex items-center justify-center">
                         <Zap size={16} className="text-[#22d3ee]" fill="currentColor" />
@@ -199,6 +199,13 @@ function Header() {
                         </div>
                     </div>
                 </div>
+                <Link
+                    href="/used-ev"
+                    className="sm:hidden text-[11px] text-[#8ba3c7] hover:text-white border border-[#1e2d42] hover:border-[#3b82f6] px-2.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                >
+                    <Search size={12} />
+                    Used Cars
+                </Link>
                 <div className="hidden sm:flex items-center gap-4">
                     <Link
                         href="/used-ev"
